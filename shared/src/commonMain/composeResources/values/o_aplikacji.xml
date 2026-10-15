@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Dane w okienku „O aplikacji” (menu ⋮ na ekranie głównym), na Androidzie i na Windows.
+    Uzupełnij i zbuduj aplikację. Puste pole nie jest pokazywane.
+    Wersję aplikacji okienko bierze z gradle.properties (magazyn.wersja, magazyn.kodWersji).
+-->
+<resources>
+    <string name="o_aplikacji_nazwa">Magazyn UR</string>
+    <string name="o_aplikacji_opis">Obsługa magazynu materiałów: wyszukiwanie, wydania, przyjęcia i lista wydań do zaksięgowania w SAP.</string>
+    <string name="o_aplikacji_autor">Dawid Pudełko</string>
+    <string name="o_aplikacji_kontakt">pudelko.dawid@protonmail.com</string>
+    <string name="o_aplikacji_dzial"></string>
+    <string name="o_aplikacji_prawa"></string>
+</resources>

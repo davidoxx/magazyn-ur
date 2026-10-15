@@ -1,0 +1,26 @@
+*.iml
+.gradle
+.kotlin/
+.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+
+# Klucze Supabase i ścieżka do SDK – tylko na tym komputerze
+local.properties
+.env*
+
+# Katalog części z arkusza SAP (dane firmy). Repozytorium jest publiczne, więc katalog
+# zostaje tylko na komputerze: tworzy go narzedzia/katalog_z_excela.py z pliku Excel.
+shared/src/commonMain/composeResources/files/katalog.json
+*.xlsx
+
+# Strona (web/)
+node_modules/
+web/dist/
+web/dev-dist/
+
+# Lokalne ustawienia Claude Code
+.claude/settings.local.json

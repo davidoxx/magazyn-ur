@@ -1,0 +1,8 @@
+# Jednolite końce linii (LF) niezależnie od systemu; skrypty Windows z CRLF
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.jar binary
+*.png binary
+*.webp binary

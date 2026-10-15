@@ -1,0 +1,61 @@
+# Strona (PWA) z folderu web/: testy, budowa i publikacja na GitHub Pages.
+# Adres i klucz publishable Supabase: Settings -> Secrets and variables -> Actions -> Variables
+# (SUPABASE_URL, SUPABASE_KEY). Źródło stron: Settings -> Pages -> GitHub Actions.
+name: Strona
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "gradle.properties"
+      - "shared/src/commonMain/composeResources/values/o_aplikacji.xml"
+      - ".github/workflows/strona.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  budowa:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - id: pages
+        uses: actions/configure-pages@v6
+      - name: Budowa
+        run: npm run build
+        env:
+          # Strona leży w podfolderze: https://<login>.github.io/<repozytorium>/
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/dist
+
+  publikacja:
+    needs: budowa
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publikacja.outputs.page_url }}
+    steps:
+      - id: publikacja
+        uses: actions/deploy-pages@v5
