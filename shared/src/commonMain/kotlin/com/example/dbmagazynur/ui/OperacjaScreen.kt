@@ -48,11 +48,13 @@ fun OperacjaScreen(
     material: Material,
     iloscTekst: String,
     uwagi: String,
+    nrZamowienia: String,
     maszyna: Maszyna?,
     trwa: Boolean,
     blad: String?,
     onIloscChange: (String) -> Unit,
     onUwagiChange: (String) -> Unit,
+    onNrZamowieniaChange: (String) -> Unit,
     onWybierzMaszyne: () -> Unit,
     onUsunMaszyne: () -> Unit,
     onWykonaj: () -> Unit,
@@ -101,6 +103,16 @@ fun OperacjaScreen(
                     enabled = !trwa,
                     onWybierz = onWybierzMaszyne,
                     onUsun = onUsunMaszyne,
+                )
+            } else {
+                OutlinedTextField(
+                    value = nrZamowienia,
+                    onValueChange = onNrZamowieniaChange,
+                    label = { Text("Numer zamówienia (opcjonalnie)") },
+                    singleLine = true,
+                    enabled = !trwa,
+                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -168,11 +180,13 @@ private fun OperacjaScreenPreview() {
             ),
             iloscTekst = "4",
             uwagi = "",
+            nrZamowienia = "",
             maszyna = Maszyna(3, "Prasa krawędziowa 2", kod = "PL01-L2-PR02"),
             trwa = false,
             blad = null,
             onIloscChange = {},
             onUwagiChange = {},
+            onNrZamowieniaChange = {},
             onWybierzMaszyne = {},
             onUsunMaszyne = {},
             onWykonaj = {},

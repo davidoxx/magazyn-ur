@@ -50,6 +50,14 @@ export function daneMaterialu(p: {
   return ok(dane);
 }
 
+// Parametry funkcji dodaj_material: te same pola z przedrostkiem p_ i numer zamówienia.
+// Nowy materiał idzie przez funkcję, żeby numer trafił do wpisu „utworzenie” w historii.
+export function parametryNowegoMaterialu(dane: ZapisMaterialu, nrZamowienia: string): Record<string, unknown> {
+  const parametry: Record<string, unknown> = Object.fromEntries(Object.entries(dane).map(([kolumna, wartosc]) => [`p_${kolumna}`, wartosc]));
+  parametry.p_nr_zamowienia = nrZamowienia.trim() || null;
+  return parametry;
+}
+
 // Dane z formularza do zapisu w tabeli maszyny (tylko kolumny z grantów).
 // Pusty kod idzie jako null: kolumna jest unikalna, a nulli może być wiele.
 export function daneMaszyny(

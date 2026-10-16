@@ -2,7 +2,7 @@ import { Button, Chip, CircularProgress, InputAdornment, Stack, TextField, Toggl
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { komunikat } from "../logika/bledy";
-import { daneMaterialu } from "../logika/dane";
+import { daneMaterialu, parametryNowegoMaterialu } from "../logika/dane";
 import type { Material, TypMaterialu } from "../logika/typy";
 import { dane, supabase } from "../supabase";
 import { BladZPonow, Ekran, Ladowanie, PasekZPowrotem, useDane, useWstecz, zostawKomunikat } from "../ui/wspolne";
@@ -49,6 +49,8 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
   const [miejsce, ustawMiejsce] = useState(edytowany?.miejsce ?? "");
   const [jednostka, ustawJednostke] = useState(edytowany?.jednostka ?? "szt");
   const [iloscTekst, ustawIlosc] = useState("");
+  // Tylko przy dodawaniu (opcjonalny); trafia do historii jako część wpisu „utworzenie”
+  const [nrZamowienia, ustawNrZamowienia] = useState("");
   const [opis, ustawOpis] = useState(edytowany?.opis ?? "");
   const [trwa, ustawTrwa] = useState(false);
   const [blad, ustawBlad] = useState<string | null>(null);
@@ -61,11 +63,10 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
     if (!wynik.ok) return ustawBlad(wynik.blad);
     ustawTrwa(true);
     try {
-      const tabela = supabase.from("materialy");
       const zapisany = await dane<Material | null>(
         edytowany
-          ? tabela.update(wynik.wartosc).eq("id", edytowany.id).select().maybeSingle()
-          : tabela.insert(wynik.wartosc).select().maybeSingle(),
+          ? supabase.from("materialy").update(wynik.wartosc).eq("id", edytowany.id).select().maybeSingle()
+          : supabase.rpc("dodaj_material", parametryNowegoMaterialu(wynik.wartosc, nrZamowienia)),
       );
       if (!zapisany) throw new Error("Nie ma takiego materiału. Mógł zostać usunięty.");
       zostawKomunikat(nowy ? "Dodano materiał" : "Zapisano zmiany");
@@ -115,6 +116,16 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
               htmlInput: { inputMode: "decimal" },
               input: { endAdornment: <InputAdornment position="end">{jednostka.trim()}</InputAdornment> },
             }}
+          />
+        )}
+        {nowy && (
+          <TextField
+            label="Numer zamówienia (opcjonalnie)"
+            value={nrZamowienia}
+            onChange={(e) => ustawNrZamowienia(e.target.value)}
+            disabled={trwa}
+            fullWidth
+            slotProps={{ htmlInput: bezPoprawek }}
           />
         )}
         <TextField label="Opis (opcjonalnie)" value={opis} onChange={(e) => ustawOpis(e.target.value)} disabled={trwa} multiline minRows={2} fullWidth />

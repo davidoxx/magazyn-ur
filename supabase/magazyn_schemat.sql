@@ -108,21 +108,26 @@ create table public.maszyny (
 
 
 -- ---------------------------------------------------------------------
--- 3. RUCHY MAGAZYNOWE (wydania i przyjęcia w jednej tabeli)
+-- 3. RUCHY MAGAZYNOWE (wydania, przyjęcia i utworzenie materiału w jednej tabeli)
+--    UTWORZENIE: wpis przy dodaniu materiału, ilosc = stan początkowy (może być 0).
 -- ---------------------------------------------------------------------
 create table public.ruchy (
   id                bigint generated always as identity primary key,
   material_id       bigint not null references public.materialy(id),
-  typ               text not null check (typ in ('WYDANIE', 'PRZYJECIE')),
-  ilosc             numeric(12,3) not null check (ilosc > 0),
+  typ               text not null,
+  ilosc             numeric(12,3) not null,
   uwagi             text,
+  nr_zamowienia     text,                            -- przy przyjęciu i utworzeniu (opcjonalny)
   uzytkownik        uuid not null references public.uzytkownicy(id),
   utworzono         timestamptz not null default now(),
   zaksiegowano_sap  timestamptz,                     -- kiedy lider wydał w SAP
   zaksiegowal       uuid references public.uzytkownicy(id),
   anulowano         timestamptz,                     -- błędne wydanie, towar wrócił na stan
   anulowal          uuid references public.uzytkownicy(id),
-  maszyna_id        bigint references public.maszyny(id)  -- na co poszło wydanie
+  maszyna_id        bigint references public.maszyny(id),  -- na co poszło wydanie
+  constraint ruchy_typ_check check (typ in ('WYDANIE', 'PRZYJECIE', 'UTWORZENIE')),
+  -- wydanie i przyjęcie muszą mieć ilość, utworzenie może mieć stan początkowy 0
+  constraint ruchy_ilosc_check check (ilosc > 0 or (typ = 'UTWORZENIE' and ilosc >= 0))
 );
 
 create index ruchy_material_idx  on public.ruchy (material_id);
@@ -201,6 +206,43 @@ create trigger przed_zmiana_typu
   when (old.typ <> new.typ)
   execute function public.blokada_zmiany_typu();
 
+-- Każde dodanie materiału przez aplikację zostawia wpis w historii
+create function public.po_dodaniu_materialu()
+returns trigger
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  -- utworzyl = auth.uid(); w panelu Supabase nie ma zalogowanego użytkownika
+  if new.utworzyl is not null then
+    insert into public.ruchy (material_id, typ, ilosc, uzytkownik)
+    values (new.id, 'UTWORZENIE', new.ilosc, new.utworzyl);
+  end if;
+  return new;
+end;
+$$;
+
+create trigger po_dodaniu_materialu
+  after insert on public.materialy
+  for each row execute function public.po_dodaniu_materialu();
+
+-- Usuwanie materiału bez historii (poziom 3): sam wpis o utworzeniu nie blokuje.
+-- Gdy są inne ruchy, klucz obcy i tak przerwie usuwanie (razem z tym delete).
+create function public.przed_usunieciem_materialu()
+returns trigger
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  delete from public.ruchy
+   where material_id = old.id
+     and typ = 'UTWORZENIE';
+  return old;
+end;
+$$;
+
+create trigger przed_usunieciem_materialu
+  before delete on public.materialy
+  for each row execute function public.przed_usunieciem_materialu();
+
 
 -- ---------------------------------------------------------------------
 -- 4. OPERACJE (aplikacja wywołuje je przez supabase.Rpc)
@@ -261,8 +303,52 @@ begin
 end;
 $$;
 
--- Poziom 1+: uzupełnienie zapasu
-create function public.przyjmij(p_material_id bigint, p_ilosc numeric, p_uwagi text default null)
+-- Poziom 1+: dodanie materiału z numerem zamówienia (wpis w historii robi trigger
+-- po_dodaniu_materialu, tu dopisujemy do niego numer)
+create function public.dodaj_material(
+  p_nazwa         text,
+  p_typ           text,
+  p_nr_sap        text    default null,
+  p_miejsce       text    default null,
+  p_jednostka     text    default 'szt',
+  p_opis          text    default null,
+  p_ilosc         numeric default 0,
+  p_nr_zamowienia text    default null
+)
+returns public.materialy
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_material public.materialy;
+begin
+  if public.moj_poziom() < 1 then
+    raise exception 'Brak uprawnień';
+  end if;
+  if p_ilosc is not null and p_ilosc < 0 then
+    raise exception 'Stan początkowy nie może być ujemny';
+  end if;
+
+  insert into public.materialy (nazwa, opis, typ, nr_sap, miejsce, ilosc, jednostka)
+  values (p_nazwa, p_opis, p_typ, p_nr_sap, p_miejsce, coalesce(p_ilosc, 0),
+          coalesce(p_jednostka, 'szt'))
+  returning * into v_material;
+
+  update public.ruchy
+     set nr_zamowienia = nullif(btrim(p_nr_zamowienia), '')
+   where material_id = v_material.id
+     and typ = 'UTWORZENIE';
+
+  return v_material;
+end;
+$$;
+
+-- Poziom 1+: uzupełnienie zapasu, opcjonalnie z numerem zamówienia
+create function public.przyjmij(
+  p_material_id   bigint,
+  p_ilosc         numeric,
+  p_uwagi         text default null,
+  p_nr_zamowienia text default null
+)
 returns bigint
 language plpgsql security definer set search_path = ''
 as $$
@@ -283,8 +369,9 @@ begin
     raise exception 'Nie ma takiego materiału';
   end if;
 
-  insert into public.ruchy (material_id, typ, ilosc, uwagi, uzytkownik)
-  values (p_material_id, 'PRZYJECIE', p_ilosc, p_uwagi, auth.uid())
+  insert into public.ruchy (material_id, typ, ilosc, uwagi, uzytkownik, nr_zamowienia)
+  values (p_material_id, 'PRZYJECIE', p_ilosc, p_uwagi, auth.uid(),
+          nullif(btrim(p_nr_zamowienia), ''))
   returning id into v_id;
 
   return v_id;
@@ -449,9 +536,12 @@ revoke execute on function
   public.moj_poziom(),
   public.nowy_uzytkownik(),
   public.blokada_zmiany_typu(),
+  public.po_dodaniu_materialu(),
+  public.przed_usunieciem_materialu(),
   public.szukaj_materialow(text),
+  public.dodaj_material(text, text, text, text, text, text, numeric, text),
   public.wydaj(bigint, numeric, bigint, text),
-  public.przyjmij(bigint, numeric, text),
+  public.przyjmij(bigint, numeric, text, text),
   public.zaksieguj_w_sap(bigint[]),
   public.anuluj_wydanie(bigint),
   public.ustaw_poziom(uuid, integer),
@@ -461,7 +551,9 @@ from public, anon, authenticated;
 grant execute on function public.moj_poziom()                        to authenticated;
 grant execute on function public.szukaj_materialow(text)             to authenticated;
 grant execute on function public.wydaj(bigint, numeric, bigint, text) to authenticated;
-grant execute on function public.przyjmij(bigint, numeric, text)     to authenticated;
+grant execute on function public.dodaj_material(text, text, text, text, text, text, numeric, text)
+                                                                     to authenticated;
+grant execute on function public.przyjmij(bigint, numeric, text, text) to authenticated;
 grant execute on function public.zaksieguj_w_sap(bigint[])           to authenticated;
 grant execute on function public.anuluj_wydanie(bigint)              to authenticated;
 grant execute on function public.ustaw_poziom(uuid, integer)         to authenticated;

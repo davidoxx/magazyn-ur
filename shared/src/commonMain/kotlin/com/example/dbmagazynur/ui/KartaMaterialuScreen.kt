@@ -74,11 +74,13 @@ fun KartaMaterialu(
                 material = material,
                 iloscTekst = vm.iloscTekst,
                 uwagi = vm.uwagi,
+                nrZamowienia = vm.nrZamowienia,
                 maszyna = vm.maszyna,
                 trwa = vm.operacjaTrwa,
                 blad = vm.bladOperacji,
                 onIloscChange = vm::zmienIlosc,
                 onUwagiChange = vm::zmienUwagi,
+                onNrZamowieniaChange = vm::zmienNrZamowienia,
                 onWybierzMaszyne = vm::pokazWyborMaszyny,
                 onUsunMaszyne = { vm.wybierzMaszyne(null) },
                 onWykonaj = vm::wykonaj,
@@ -217,7 +219,11 @@ private fun KartaScreen(
 private fun WierszRuchu(ruch: Ruch, jednostka: String, materialSap: Boolean) {
     val status = ruch.status(materialSap)
     val anulowany = status == StatusRuchu.ANULOWANY
-    val znak = if (ruch.typ == TypRuchu.WYDANIE) "−" else "+"
+    val znak = when {
+        ruch.typ == TypRuchu.WYDANIE -> "−"
+        ruch.ilosc > 0 -> "+"
+        else -> "" // utworzenie bez stanu początkowego
+    }
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -230,8 +236,9 @@ private fun WierszRuchu(ruch: Ruch, jednostka: String, materialSap: Boolean) {
             style = MaterialTheme.typography.titleMedium,
             color = when {
                 anulowany -> MaterialTheme.colorScheme.onSurfaceVariant
-                ruch.typ == TypRuchu.PRZYJECIE -> MaterialTheme.colorScheme.primary
-                else -> Color.Unspecified
+                ruch.typ == TypRuchu.WYDANIE -> Color.Unspecified
+                ruch.ilosc > 0 -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
             },
             textDecoration = if (anulowany) TextDecoration.LineThrough else null,
             modifier = Modifier.width(96.dp),
@@ -240,6 +247,7 @@ private fun WierszRuchu(ruch: Ruch, jednostka: String, materialSap: Boolean) {
             Text(
                 when {
                     ruch.typ == TypRuchu.PRZYJECIE -> "Przyjęcie"
+                    ruch.typ == TypRuchu.UTWORZENIE -> "Utworzenie materiału"
                     ruch.maszyna != null -> "Wydanie → ${ruch.maszyna.opis()}"
                     else -> "Wydanie"
                 },
@@ -249,6 +257,9 @@ private fun WierszRuchu(ruch: Ruch, jednostka: String, materialSap: Boolean) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            ruch.nrZamowienia?.takeIf { it.isNotBlank() }?.let {
+                Text("Nr zamówienia: $it", style = MaterialTheme.typography.bodySmall)
+            }
             ruch.uwagi?.takeIf { it.isNotBlank() }?.let {
                 Text("Uwagi: $it", style = MaterialTheme.typography.bodySmall)
             }
@@ -315,7 +326,9 @@ private fun KartaScreenPreview() {
                     anulowano = "2026-10-07T09:20:00+00:00", kto = Osoba("jan.kowalski@magazyn.local"),
                     ktoAnulowal = Osoba("anna.nowak@magazyn.local"),
                 ),
-                Ruch(1, TypRuchu.PRZYJECIE, 50.0, utworzono = "2026-10-06T07:00:00+00:00",
+                Ruch(1, TypRuchu.PRZYJECIE, 50.0, nrZamowienia = "4500012345",
+                    utworzono = "2026-10-06T07:00:00+00:00", kto = Osoba("anna.nowak@magazyn.local")),
+                Ruch(0, TypRuchu.UTWORZENIE, 0.0, utworzono = "2026-10-05T14:00:00+00:00",
                     kto = Osoba("anna.nowak@magazyn.local")),
             ),
             saStarsze = true,

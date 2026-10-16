@@ -42,6 +42,8 @@ export function Operacja({ rodzaj }: { rodzaj: keyof typeof RODZAJE }) {
   const material = useDane(() => pobierzMaterial(id), [id]);
   const [iloscTekst, ustawIlosc] = useState("");
   const [uwagi, ustawUwagi] = useState("");
+  // Tylko przy przyjęciu (opcjonalny)
+  const [nrZamowienia, ustawNrZamowienia] = useState("");
   const [maszyna, ustawMaszyne] = useState<Maszyna | null>(null);
   const [wyborMaszyny, ustawWyborMaszyny] = useState(false);
   const [trwa, ustawTrwa] = useState(false);
@@ -62,7 +64,7 @@ export function Operacja({ rodzaj }: { rodzaj: keyof typeof RODZAJE }) {
         supabase.rpc(rodzaj, {
           p_material_id: m.id,
           p_ilosc: ilosc.wartosc,
-          ...(rodzaj === "wydaj" ? { p_maszyna_id: maszyna?.id ?? null } : {}),
+          ...(rodzaj === "wydaj" ? { p_maszyna_id: maszyna?.id ?? null } : { p_nr_zamowienia: nrZamowienia.trim() || null }),
           p_uwagi: uwagi.trim() || null,
         }),
       );
@@ -114,6 +116,16 @@ export function Operacja({ rodzaj }: { rodzaj: keyof typeof RODZAJE }) {
                 </Box>
               )}
             </Card>
+          )}
+          {rodzaj === "przyjmij" && (
+            <TextField
+              label="Numer zamówienia (opcjonalnie)"
+              value={nrZamowienia}
+              onChange={(e) => ustawNrZamowienia(e.target.value)}
+              disabled={trwa}
+              fullWidth
+              slotProps={{ htmlInput: { autoCapitalize: "none", autoCorrect: "off", spellCheck: false } }}
+            />
           )}
           <TextField label="Uwagi (opcjonalnie)" value={uwagi} onChange={(e) => ustawUwagi(e.target.value)} disabled={trwa} multiline minRows={2} fullWidth />
           {blad && <Typography color="error">{blad}</Typography>}

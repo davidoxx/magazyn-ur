@@ -71,6 +71,14 @@ Zasady, których pilnuje baza (aplikacja ma je tylko odzwierciedlać):
 - Stan materiału (`materialy.ilosc`) zmienia się wyłącznie przez funkcje RPC `wydaj`
   i `przyjmij`. Aplikacja nie ma uprawnień do bezpośredniej zmiany `ilosc`.
   Ilość początkową można podać przy dodawaniu materiału.
+- Nowy materiał aplikacja dodaje przez RPC `dodaj_material(p_nazwa, p_typ, p_nr_sap, p_miejsce,
+  p_jednostka, p_opis, p_ilosc, p_nr_zamowienia)`. Trigger `po_dodaniu_materialu` zapisuje
+  w `ruchy` wpis `UTWORZENIE` (ilosc = stan początkowy, może być 0) przy każdym dodaniu
+  przez zalogowanego użytkownika (z panelu Supabase bez wpisu). Trigger
+  `przed_usunieciem_materialu` usuwa ten wpis, żeby materiał bez innej historii dało się usunąć.
+- Numer zamówienia (`ruchy.nr_zamowienia`, opcjonalny): przy przyjęciu
+  `przyjmij(p_material_id, p_ilosc, p_uwagi, p_nr_zamowienia)` i przy dodaniu materiału;
+  widać go w historii na karcie.
 - Materiał typu `SAP` musi mieć `nr_sap`, materiał `KOSZTOWY` nie może go mieć.
 - Typu materiału nie można zmienić (w żadną stronę), jeśli ma wydania
   niezaksięgowane i nieanulowane (trigger `przed_zmiana_typu`). Materiał kosztowy

@@ -42,5 +42,13 @@ fun daneMaterialu(
     )
 }
 
+// Parametry funkcji dodaj_material: te same pola z przedrostkiem p_ i numer zamówienia.
+// Nowy materiał idzie przez funkcję, żeby numer trafił do wpisu „utworzenie” w historii.
+fun parametryNowegoMaterialu(dane: JsonObject, nrZamowienia: String): JsonObject =
+    buildJsonObject {
+        dane.forEach { (kolumna, wartosc) -> put("p_$kolumna", wartosc) }
+        put("p_nr_zamowienia", nrZamowienia.trim().ifEmpty { null })
+    }
+
 private fun blad(komunikat: String): Result<JsonObject> =
     Result.failure(IllegalArgumentException(komunikat))

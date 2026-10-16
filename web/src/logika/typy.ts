@@ -26,7 +26,8 @@ export interface Maszyna {
 
 export const opisMaszyny = (m: Pick<Maszyna, "nazwa" | "kod">) => (m.kod ? `${m.nazwa} (${m.kod})` : m.nazwa);
 
-export type TypRuchu = "WYDANIE" | "PRZYJECIE";
+// UTWORZENIE: wpis przy dodaniu materiału, ilosc = stan początkowy (może być 0)
+export type TypRuchu = "WYDANIE" | "PRZYJECIE" | "UTWORZENIE";
 
 // Wiersz tabeli ruchy z dołączonymi osobami i maszyną (KOLUMNY_HISTORII)
 export interface Ruch {
@@ -34,6 +35,8 @@ export interface Ruch {
   typ: TypRuchu;
   ilosc: number;
   uwagi: string | null;
+  // Przy przyjęciu i utworzeniu materiału (opcjonalny)
+  nr_zamowienia: string | null;
   utworzono: string;
   zaksiegowano_sap: string | null;
   anulowano: string | null;
@@ -45,7 +48,7 @@ export interface Ruch {
 
 // ruchy ma trzy klucze obce do uzytkownicy, więc każde dołączenie wskazuje swój klucz
 export const KOLUMNY_HISTORII =
-  "id,typ,ilosc,uwagi,utworzono,zaksiegowano_sap,anulowano," +
+  "id,typ,ilosc,uwagi,nr_zamowienia,utworzono,zaksiegowano_sap,anulowano," +
   "kto:uzytkownicy!ruchy_uzytkownik_fkey(nazwa)," +
   "kto_ksiegowal:uzytkownicy!ruchy_zaksiegowal_fkey(nazwa)," +
   "kto_anulowal:uzytkownicy!ruchy_anulowal_fkey(nazwa)," +

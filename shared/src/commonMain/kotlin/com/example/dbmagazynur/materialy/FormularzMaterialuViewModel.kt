@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.dbmagazynur.data.komunikat
 import com.example.dbmagazynur.data.supabase
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -29,6 +30,8 @@ class FormularzMaterialuViewModel : ViewModel() {
     var jednostka by mutableStateOf("")
     var iloscTekst by mutableStateOf("")
     var opis by mutableStateOf("")
+    // Tylko przy dodawaniu (opcjonalny); trafia do historii jako część wpisu „utworzenie”
+    var nrZamowienia by mutableStateOf("")
 
     var trwa by mutableStateOf(false)
         private set
@@ -67,6 +70,7 @@ class FormularzMaterialuViewModel : ViewModel() {
         this.jednostka = jednostka
         this.opis = opis
         iloscTekst = ""
+        nrZamowienia = ""
         blad = null
         otwarty = true
     }
@@ -93,15 +97,16 @@ class FormularzMaterialuViewModel : ViewModel() {
             trwa = true
             blad = null
             try {
-                val tabela = supabase.from("materialy")
                 val wynik = if (material == null) {
-                    tabela.insert(dane) { select() }
+                    supabase.postgrest
+                        .rpc("dodaj_material", parametryNowegoMaterialu(dane, nrZamowienia))
+                        .decodeAs<Material>()
                 } else {
-                    tabela.update(dane) {
+                    supabase.from("materialy").update(dane) {
                         filter { eq("id", material.id) }
                         select()
-                    }
-                }.decodeSingleOrNull<Material>()
+                    }.decodeSingleOrNull<Material>()
+                }
 
                 if (wynik == null) {
                     blad = "Nie ma takiego materiału. Mógł zostać usunięty."

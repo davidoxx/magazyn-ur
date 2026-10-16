@@ -250,24 +250,32 @@ function WierszRuchu({ ruch, material }: { ruch: Ruch; material: Material }) {
     status === "ANULOWANY" ? `${formatujDate(ruch.anulowano!)}${kto(ruch.kto_anulowal)}`
     : status === "ZAKSIEGOWANY" ? `${formatujDate(ruch.zaksiegowano_sap!)}${kto(ruch.kto_ksiegowal)}`
     : undefined;
+  const wydanie = ruch.typ === "WYDANIE";
+  // Utworzenie bez stanu początkowego nie ma znaku
+  const znak = wydanie ? "−" : ruch.ilosc > 0 ? "+" : "";
+  const kolor = anulowany ? "text.secondary" : wydanie ? "text.primary" : ruch.ilosc > 0 ? "primary" : "text.secondary";
+  const tytul =
+    ruch.typ === "PRZYJECIE" ? "Przyjęcie"
+    : ruch.typ === "UTWORZENIE" ? "Utworzenie materiału"
+    : ruch.maszyna ? `Wydanie → ${opisMaszyny(ruch.maszyna)}`
+    : "Wydanie";
   return (
     <>
       <Stack direction="row" spacing={1.5} sx={{ py: 1 }}>
         <Typography
           variant="subtitle1"
           sx={{ width: 96, flexShrink: 0, textDecoration: anulowany ? "line-through" : undefined }}
-          color={anulowany ? "text.secondary" : ruch.typ === "PRZYJECIE" ? "primary" : "text.primary"}
+          color={kolor}
         >
-          {ruch.typ === "WYDANIE" ? "−" : "+"}
+          {znak}
           {formatujIlosc(ruch.ilosc)} {material.jednostka}
         </Typography>
         <Box sx={{ minWidth: 0 }}>
-          <Typography>
-            {ruch.typ === "PRZYJECIE" ? "Przyjęcie" : ruch.maszyna ? `Wydanie → ${opisMaszyny(ruch.maszyna)}` : "Wydanie"}
-          </Typography>
+          <Typography>{tytul}</Typography>
           <Typography variant="body2" color="text.secondary">
             {formatujDate(ruch.utworzono)} · {ruch.kto ? emailNaLogin(ruch.kto.nazwa) : "?"}
           </Typography>
+          {ruch.nr_zamowienia?.trim() && <Typography variant="body2">Nr zamówienia: {ruch.nr_zamowienia}</Typography>}
           {ruch.uwagi?.trim() && <Typography variant="body2">Uwagi: {ruch.uwagi}</Typography>}
           <TekstStatusu status={status} szczegoly={szczegoly} />
         </Box>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { daneMaszyny, daneMaterialu } from "./dane";
+import { daneMaszyny, daneMaterialu, parametryNowegoMaterialu } from "./dane";
 import { formatujDate, odmiana } from "./formatowanie";
 import { formatujIlosc, parsujIlosc } from "./ilosc";
 import { emailNaLogin, loginNaEmail, normalizujLogin } from "./login";
@@ -120,6 +120,15 @@ describe("dane formularzy", () => {
     expect(wartosc(dane({ iloscTekst: "0" }))?.ilosc).toBe(0);
   });
 
+  test("parametry funkcji dodaj_material", () => {
+    const w = wartosc(dane({ iloscTekst: "5" }))!;
+    const p = parametryNowegoMaterialu(w, " 4500012345 ");
+    expect(p).toMatchObject({ p_nazwa: "Śruba M8", p_nr_sap: "10023456", p_miejsce: null, p_ilosc: 5, p_nr_zamowienia: "4500012345" });
+    // Tylko parametry funkcji
+    expect(Object.keys(p).filter((k) => !k.startsWith("p_"))).toEqual([]);
+    expect(parametryNowegoMaterialu(wartosc(dane())!, "  ").p_nr_zamowienia).toBeNull();
+  });
+
   test("maszyna: pusty kod jako null", () => {
     expect(blad(daneMaszyny("  ", "X1", true))).toBe("Wpisz nazwę maszyny");
     expect(wartosc(daneMaszyny(" Tokarka CNC ", "  ", false))).toEqual({ nazwa: "Tokarka CNC", kod: null, aktywna: false });
@@ -133,6 +142,8 @@ describe("status i zdjęcia", () => {
     expect(statusRuchu("WYDANIE", "x", null, true)).toBe("ANULOWANY");
     expect(statusRuchu("WYDANIE", null, null, false)).toBeNull();
     expect(statusRuchu("PRZYJECIE", null, null, true)).toBeNull();
+    // Utworzenie nie czeka na zaksięgowanie, także przy materiale SAP
+    expect(statusRuchu("UTWORZENIE", null, null, true)).toBeNull();
   });
 
   test("dłuższy bok do limitu z zachowaniem proporcji", () => {

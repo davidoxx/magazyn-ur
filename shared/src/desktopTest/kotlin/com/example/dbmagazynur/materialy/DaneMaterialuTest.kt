@@ -52,4 +52,17 @@ class DaneMaterialuTest {
         assertEquals(JsonPrimitive(0.toBigDecimal()), dane(iloscTekst = "0").getOrThrow()["ilosc"])
         assertFalse("ilosc" in dane(iloscTekst = "  ").getOrThrow())
     }
+
+    @Test
+    fun parametryNowegoMaterialu() {
+        val json = parametryNowegoMaterialu(dane(iloscTekst = "5").getOrThrow(), nrZamowienia = " 4500012345 ")
+        assertEquals(JsonPrimitive("Śruba M8"), json["p_nazwa"])
+        assertEquals(JsonPrimitive("10023456"), json["p_nr_sap"])
+        assertEquals(JsonNull, json["p_miejsce"])
+        assertEquals(JsonPrimitive("4500012345"), json["p_nr_zamowienia"])
+        assertEquals(5.0, json["p_ilosc"].toString().toDouble(), 0.0)
+        // Tylko parametry funkcji dodaj_material
+        assertEquals(emptyList<String>(), json.keys.filterNot { it.startsWith("p_") })
+        assertEquals(JsonNull, parametryNowegoMaterialu(dane().getOrThrow(), "  ")["p_nr_zamowienia"])
+    }
 }

@@ -49,6 +49,7 @@ fun FormularzMaterialuScreen(
     miejsce: String,
     jednostka: String,
     iloscTekst: String,
+    nrZamowienia: String,
     opis: String,
     trwa: Boolean,
     blad: String?,
@@ -58,6 +59,7 @@ fun FormularzMaterialuScreen(
     onMiejsceChange: (String) -> Unit,
     onJednostkaChange: (String) -> Unit,
     onIloscChange: (String) -> Unit,
+    onNrZamowieniaChange: (String) -> Unit,
     onOpisChange: (String) -> Unit,
     onZapisz: () -> Unit,
     onWstecz: () -> Unit,
@@ -163,6 +165,15 @@ fun FormularzMaterialuScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                OutlinedTextField(
+                    value = nrZamowienia,
+                    onValueChange = onNrZamowieniaChange,
+                    label = { Text("Numer zamówienia (opcjonalnie)") },
+                    singleLine = true,
+                    enabled = !trwa,
+                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             OutlinedTextField(
@@ -208,6 +219,7 @@ private fun FormularzMaterialuScreenPreview() {
             miejsce = "R1-A3",
             jednostka = "szt",
             iloscTekst = "",
+            nrZamowienia = "",
             opis = "",
             trwa = false,
             blad = null,
@@ -217,6 +229,7 @@ private fun FormularzMaterialuScreenPreview() {
             onMiejsceChange = {},
             onJednostkaChange = {},
             onIloscChange = {},
+            onNrZamowieniaChange = {},
             onOpisChange = {},
             onZapisz = {},
             onWstecz = {},

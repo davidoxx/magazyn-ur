@@ -4,8 +4,9 @@ import com.example.dbmagazynur.maszyny.Maszyna
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// UTWORZENIE: wpis przy dodaniu materiału, ilosc = stan początkowy (może być 0)
 @Serializable
-enum class TypRuchu { WYDANIE, PRZYJECIE }
+enum class TypRuchu { WYDANIE, PRZYJECIE, UTWORZENIE }
 
 @Serializable
 data class Osoba(val nazwa: String)
@@ -17,6 +18,8 @@ data class Ruch(
     val typ: TypRuchu,
     val ilosc: Double,
     val uwagi: String? = null,
+    // Przy przyjęciu i utworzeniu materiału (opcjonalny)
+    @SerialName("nr_zamowienia") val nrZamowienia: String? = null,
     val utworzono: String,
     @SerialName("zaksiegowano_sap") val zaksiegowanoSap: String? = null,
     val anulowano: String? = null,
@@ -28,7 +31,7 @@ data class Ruch(
 
 // ruchy ma trzy klucze obce do uzytkownicy, więc każde dołączenie wskazuje swój klucz
 const val KOLUMNY_HISTORII =
-    "id,typ,ilosc,uwagi,utworzono,zaksiegowano_sap,anulowano," +
+    "id,typ,ilosc,uwagi,nr_zamowienia,utworzono,zaksiegowano_sap,anulowano," +
         "kto:uzytkownicy!ruchy_uzytkownik_fkey(nazwa)," +
         "kto_ksiegowal:uzytkownicy!ruchy_zaksiegowal_fkey(nazwa)," +
         "kto_anulowal:uzytkownicy!ruchy_anulowal_fkey(nazwa)," +

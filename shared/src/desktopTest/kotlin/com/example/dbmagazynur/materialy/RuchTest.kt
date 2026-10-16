@@ -24,6 +24,23 @@ class RuchTest {
         assertNull(ruch.ktoKsiegowal)
     }
 
+    @Test
+    fun utworzenieZNumeremZamowienia() {
+        val wiersz = """
+            {"id":1,"typ":"UTWORZENIE","ilosc":0,"uwagi":null,"nr_zamowienia":"4500012345",
+             "utworzono":"2026-10-08T12:32:10+00:00","zaksiegowano_sap":null,"anulowano":null,
+             "kto":{"nazwa":"jan.kowalski@magazyn.local"},"kto_ksiegowal":null,"kto_anulowal":null,
+             "maszyna":null}
+        """.trimIndent()
+
+        val ruch = jsonBazy.decodeFromString<Ruch>(wiersz)
+
+        assertEquals(TypRuchu.UTWORZENIE, ruch.typ)
+        assertEquals("4500012345", ruch.nrZamowienia)
+        // Utworzenie nie czeka na zaksięgowanie, także przy materiale SAP
+        assertNull(ruch.status(materialSap = true))
+    }
+
     private fun ruch(
         typ: TypRuchu = TypRuchu.WYDANIE,
         zaksiegowano: String? = null,

@@ -49,6 +49,9 @@ class KartaViewModel : ViewModel() {
         private set
     var uwagi by mutableStateOf("")
         private set
+    // Tylko przy przyjęciu (opcjonalny)
+    var nrZamowienia by mutableStateOf("")
+        private set
     var maszyna by mutableStateOf<Maszyna?>(null)
         private set
     var operacjaTrwa by mutableStateOf(false)
@@ -245,6 +248,7 @@ class KartaViewModel : ViewModel() {
         operacja = nowa
         iloscTekst = ""
         uwagi = ""
+        nrZamowienia = ""
         maszyna = null
         bladOperacji = null
     }
@@ -264,6 +268,10 @@ class KartaViewModel : ViewModel() {
 
     fun zmienUwagi(wartosc: String) {
         uwagi = wartosc
+    }
+
+    fun zmienNrZamowienia(wartosc: String) {
+        nrZamowienia = wartosc
     }
 
     // Lista wczytywana przy każdym otwarciu, żeby było widać maszyny dodane w trakcie zmiany
@@ -325,6 +333,7 @@ class KartaViewModel : ViewModel() {
                         put("p_ilosc", ilosc)
                         if (rodzaj == Operacja.WYDANIE) put("p_maszyna_id", maszyna?.id)
                         put("p_uwagi", uwagi.trim().ifEmpty { null })
+                        if (rodzaj == Operacja.PRZYJECIE) put("p_nr_zamowienia", nrZamowienia.trim().ifEmpty { null })
                     },
                 )
                 zmienionoStan = true
