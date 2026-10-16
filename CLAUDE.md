@@ -16,6 +16,8 @@ Wszystkie trzy korzystają z tego samego projektu Supabase.
   (Skiko) i nie niższa niż wymagana przez `coil3-integration`
 - ViewModel: `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose`; w kodzie wspólnym
   zawsze `viewModel { Klasa() }` (bez refleksji)
+- Ustawienia na urządzeniu: `multiplatform-settings-no-arg` (`data/Ustawienia.kt`; Android:
+  SharedPreferences, Windows: rejestr przez java.util.prefs, klucze z przedrostkiem `magazyn_ur.`)
 - Interfejs i komunikaty po polsku
 
 ## Struktura projektu
@@ -141,6 +143,11 @@ baza (RLS i funkcje), więc nie przenoś tej logiki wyłącznie do aplikacji.
   Windows: plik z dysku (ImageIO; JPG, PNG, BMP, GIF, bez obracania wg EXIF).
 - Bucket jest prywatny, więc do wyświetlania używaj podpisanych linków
   albo pobierania jako zalogowany użytkownik (tak robi `coil3-integration`).
+  Strona: `podpisanyLink()` w `web/src/supabase.ts` (prośby z jednej chwili jednym zapytaniem
+  `createSignedUrls`, link ważny godzinę, odnawiany po 50 minutach).
+- Miniatury w wynikach wyszukiwania: pole „Pokaż zdjęcia w wynikach” pod wyszukiwarką,
+  domyślnie wyłączone (pobiera całe zdjęcia; darmowy plan nie ma transformacji obrazów).
+  Wybór zostaje na urządzeniu (`Ustawienia.zdjeciaWWynikach`), na stronie w `localStorage`.
 
 ## Katalog części (bez logowania)
 - Arkusz Excel z SAP wbudowany w aplikację i program:

@@ -7,7 +7,7 @@ import { formatujIlosc } from "../logika/ilosc";
 import { emailNaLogin } from "../logika/login";
 import { KOLUMNY_HISTORII, opisMaszyny, statusRuchu, type Material, type Ruch } from "../logika/typy";
 import { BUCKET_ZDJEC, nowaSciezkaZdjecia, przygotujZdjecie } from "../logika/zdjecia";
-import { dane, supabase } from "../supabase";
+import { dane, podpisanyLink, supabase } from "../supabase";
 import { BladZPonow, Ekran, Ladowanie, PasekZPowrotem, useDane, useKomunikat, useWstecz } from "../ui/wspolne";
 import { TekstStatusu } from "./Glowny";
 import { Potwierdzenie } from "./Okienka";
@@ -71,17 +71,6 @@ function Pole({ etykieta, wartosc, duze }: { etykieta: string; wartosc: string; 
       <Typography variant={duze ? "h4" : "body1"}>{wartosc}</Typography>
     </div>
   );
-}
-
-// Bucket jest prywatny, więc zdjęcie pokazujemy przez podpisany link (ważny godzinę)
-const linki = new Map<string, Promise<string>>();
-function podpisanyLink(sciezka: string): Promise<string> {
-  if (!linki.has(sciezka)) {
-    const link = dane(supabase.storage.from(BUCKET_ZDJEC).createSignedUrl(sciezka, 3600)).then((d) => d.signedUrl);
-    link.catch(() => linki.delete(sciezka));
-    linki.set(sciezka, link);
-  }
-  return linki.get(sciezka)!;
 }
 
 // Sprzątanie Storage: nieudane usunięcie zostawia tylko zbędny plik

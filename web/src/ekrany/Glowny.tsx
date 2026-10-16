@@ -5,7 +5,9 @@ import {
   BottomNavigationAction,
   Box,
   Button,
+  Checkbox,
   Divider,
+  FormControlLabel,
   IconButton,
   LinearProgress,
   List,
@@ -28,7 +30,7 @@ import { formatujIlosc } from "../logika/ilosc";
 import { emailNaLogin } from "../logika/login";
 import { statusRuchu, type Material, type OstatnieWydanie } from "../logika/typy";
 import { useSesja } from "../sesja";
-import { dane, supabase } from "../supabase";
+import { dane, podpisanyLink, supabase } from "../supabase";
 import { IkonaDodaj, IkonaDoSap, IkonaWiecej } from "../ui/Ikony";
 import { Ekran, Podpowiedz } from "../ui/wspolne";
 import { OAplikacjiDialog, ZmianaHaslaDialog } from "./Okienka";
@@ -37,6 +39,25 @@ const LIMIT_WYNIKOW = 50;
 const STRONA_WYDAN = 20;
 
 type Filtr = "WSZYSTKIE" | "KOSZTOWY" | "SAP";
+
+// Miniatury zdjęć w wynikach: wybór zostaje w tej przeglądarce (jak w aplikacji na urządzeniu)
+const KLUCZ_ZDJEC = "magazyn-ur.zdjecia-w-wynikach";
+
+function czytajZdjeciaWWynikach(): boolean {
+  try {
+    return localStorage.getItem(KLUCZ_ZDJEC) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function zapiszZdjeciaWWynikach(wartosc: boolean) {
+  try {
+    localStorage.setItem(KLUCZ_ZDJEC, wartosc ? "1" : "0");
+  } catch {
+    // Bez zapisu pole będzie odznaczone przy następnym otwarciu strony
+  }
+}
 
 // Ekran główny: wyszukiwanie materiałów, ostatnie wydania i dolne menu.
 // Fraza i filtr są w adresie (#/?q=...&f=...), więc „Wstecz” z karty wraca do wyników.
@@ -49,6 +70,7 @@ export function Glowny() {
   const [menu, ustawMenu] = useState<HTMLElement | null>(null);
   const [okienko, ustawOkienko] = useState<"haslo" | "o-aplikacji" | null>(null);
   const [liczbaDoSap, ustawLiczbeDoSap] = useState<number | null>(null);
+  const [zdjecia, ustawZdjecia] = useState(czytajZdjeciaWWynikach);
 
   const login = sesja.stan === "zalogowany" ? sesja.login : "";
   const poziom = sesja.stan === "zalogowany" ? sesja.poziom : 0;
@@ -116,7 +138,7 @@ export function Glowny() {
 
   return (
     <Ekran pasek={pasek} dol={dol}>
-      <Box sx={{ px: 2, py: 1 }}>
+      <Box sx={{ px: 2, pt: 1 }}>
         <TextField
           placeholder="Nazwa, numer SAP albo miejsce"
           value={fraza}
@@ -125,9 +147,23 @@ export function Glowny() {
           fullWidth
           slotProps={{ htmlInput: { autoCapitalize: "none", autoCorrect: "off", spellCheck: false, enterKeyHint: "search" } }}
         />
+        {/* Zdjęcia są pobierane z internetu, więc użytkownik włącza je sam */}
+        <FormControlLabel
+          label="Pokaż zdjęcia w wynikach"
+          control={
+            <Checkbox
+              checked={zdjecia}
+              onChange={(e) => {
+                ustawZdjecia(e.target.checked);
+                zapiszZdjeciaWWynikach(e.target.checked);
+              }}
+            />
+          }
+          slotProps={{ typography: { variant: "body2" } }}
+        />
       </Box>
       {fraza.trim() ? (
-        <WynikiWyszukiwania fraza={fraza.trim()} />
+        <WynikiWyszukiwania fraza={fraza.trim()} zdjecia={zdjecia} />
       ) : (
         <OstatnieWydania filtr={filtr} onFiltr={(f) => ustawParametr("f", f === "WSZYSTKIE" ? null : f)} />
       )}
@@ -137,7 +173,7 @@ export function Glowny() {
   );
 }
 
-function WynikiWyszukiwania({ fraza }: { fraza: string }) {
+function WynikiWyszukiwania({ fraza, zdjecia }: { fraza: string; zdjecia: boolean }) {
   const navigate = useNavigate();
   const [wynik, ustawWynik] = useState<{ dla: string; lista: Material[]; saKolejne: boolean } | null>(null);
   const [szukam, ustawSzukam] = useState(false);
@@ -185,6 +221,7 @@ function WynikiWyszukiwania({ fraza }: { fraza: string }) {
         <List disablePadding>
           {wynik?.lista.map((m) => (
             <ListItemButton key={m.id} divider onClick={() => navigate(`/material/${m.id}`)}>
+              {zdjecia && <Miniatura sciezka={m.zdjecie} />}
               <ListItemText
                 primary={m.nazwa}
                 secondary={[m.typ === "SAP" ? `SAP ${m.nr_sap}` : "Kosztowy", m.miejsce?.trim() && `miejsce ${m.miejsce}`]
@@ -200,6 +237,52 @@ function WynikiWyszukiwania({ fraza }: { fraza: string }) {
         </List>
       )}
     </>
+  );
+}
+
+// To samo zdjęcie co na karcie materiału (ten sam link), więc karta pokaże je od razu
+function Miniatura({ sciezka }: { sciezka: string | null }) {
+  const [link, ustawLink] = useState<string | null>(null);
+  const [blad, ustawBlad] = useState(false);
+
+  useEffect(() => {
+    let aktualne = true;
+    ustawLink(null);
+    ustawBlad(false);
+    if (sciezka) {
+      podpisanyLink(sciezka).then(
+        (l) => aktualne && ustawLink(l),
+        () => aktualne && ustawBlad(true),
+      );
+    }
+    return () => {
+      aktualne = false;
+    };
+  }, [sciezka]);
+
+  return (
+    <Box
+      sx={{
+        width: 64,
+        height: 64,
+        flexShrink: 0,
+        mr: 2,
+        borderRadius: 2,
+        overflow: "hidden",
+        bgcolor: "action.hover",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {!sciezka ? (
+        <Typography variant="caption" color="text.secondary" align="center" sx={{ lineHeight: 1.2 }}>
+          Brak zdjęcia
+        </Typography>
+      ) : link && !blad ? (
+        <img src={link} alt="" loading="lazy" onError={() => ustawBlad(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : null}
+    </Box>
   );
 }
 

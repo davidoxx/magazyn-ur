@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dbmagazynur.data.Ustawienia
 import com.example.dbmagazynur.data.komunikat
 import com.example.dbmagazynur.data.supabase
 import io.github.jan.supabase.postgrest.postgrest
@@ -37,6 +38,9 @@ class WyszukiwanieViewModel : ViewModel() {
         private set
     var stan by mutableStateOf(StanWyszukiwania())
         private set
+    // Miniatury zdjęć obok nazw; wybór zostaje na urządzeniu po ponownym uruchomieniu
+    var pokazZdjecia by mutableStateOf(Ustawienia.zdjeciaWWynikach)
+        private set
 
     private val zapytania = MutableStateFlow(Zapytanie(""))
 
@@ -55,6 +59,11 @@ class WyszukiwanieViewModel : ViewModel() {
             if (nowa.isNotEmpty()) stan = stan.copy(szukam = true)
             zapytania.value = Zapytanie(nowa)
         }
+    }
+
+    fun ustawPokazZdjecia(wartosc: Boolean) {
+        pokazZdjecia = wartosc
+        Ustawienia.zdjeciaWWynikach = wartosc
     }
 
     fun ponow() {
