@@ -330,24 +330,43 @@ private fun WierszMaterialu(material: Material, pokazZdjecie: Boolean, onClick: 
         add(if (material.typ == TypMaterialu.SAP) "SAP ${material.nrSap}" else "Kosztowy")
         material.miejsce?.takeIf { it.isNotBlank() }?.let { add("miejsce $it") }
     }.joinToString(" · ")
+    val ilosc = @Composable {
+        Text(
+            "${formatujIlosc(material.ilosc)} ${material.jednostka}",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (material.ilosc == 0.0) MaterialTheme.colorScheme.error else Color.Unspecified,
+        )
+    }
 
-    ListItem(
-        leadingContent = if (pokazZdjecie) {
-            { Miniatura(material.zdjecie) }
-        } else {
-            null
-        },
-        headlineContent = { Text(material.nazwa) },
-        supportingContent = { Text(szczegoly) },
-        trailingContent = {
-            Text(
-                "${formatujIlosc(material.ilosc)} ${material.jednostka}",
-                style = MaterialTheme.typography.titleMedium,
-                color = if (material.ilosc == 0.0) MaterialTheme.colorScheme.error else Color.Unspecified,
-            )
-        },
-        modifier = Modifier.clickable(onClick = onClick),
-    )
+    if (pokazZdjecie) {
+        // Ze zdjęciem wiersz jest dwa razy wyższy. Ilość stoi pod nazwą,
+        // żeby przy dużym zdjęciu na wąskim telefonie nazwa miała miejsce.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Miniatura(material.zdjecie)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(material.nazwa, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    szczegoly,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ilosc()
+            }
+        }
+    } else {
+        ListItem(
+            headlineContent = { Text(material.nazwa) },
+            supportingContent = { Text(szczegoly) },
+            trailingContent = ilosc,
+            modifier = Modifier.clickable(onClick = onClick),
+        )
+    }
 }
 
 // To samo zdjęcie co na karcie materiału, więc karta pokaże je od razu z pamięci podręcznej
@@ -356,8 +375,8 @@ private fun Miniatura(sciezka: String?) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(64.dp)
-            .clip(MaterialTheme.shapes.small)
+            .size(144.dp)
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
         if (sciezka != null) {
@@ -370,7 +389,7 @@ private fun Miniatura(sciezka: String?) {
         } else {
             Text(
                 "Brak zdjęcia",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )

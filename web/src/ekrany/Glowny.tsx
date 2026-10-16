@@ -219,20 +219,36 @@ function WynikiWyszukiwania({ fraza, zdjecia }: { fraza: string; zdjecia: boolea
         </>
       ) : (
         <List disablePadding>
-          {wynik?.lista.map((m) => (
-            <ListItemButton key={m.id} divider onClick={() => navigate(`/material/${m.id}`)}>
-              {zdjecia && <Miniatura sciezka={m.zdjecie} />}
-              <ListItemText
-                primary={m.nazwa}
-                secondary={[m.typ === "SAP" ? `SAP ${m.nr_sap}` : "Kosztowy", m.miejsce?.trim() && `miejsce ${m.miejsce}`]
-                  .filter(Boolean)
-                  .join(" · ")}
-              />
-              <Typography variant="subtitle1" color={m.ilosc === 0 ? "error" : undefined} sx={{ ml: 2, whiteSpace: "nowrap" }}>
+          {wynik?.lista.map((m) => {
+            const szczegoly = [m.typ === "SAP" ? `SAP ${m.nr_sap}` : "Kosztowy", m.miejsce?.trim() && `miejsce ${m.miejsce}`]
+              .filter(Boolean)
+              .join(" · ");
+            const ilosc = (
+              <Typography variant="subtitle1" color={m.ilosc === 0 ? "error" : undefined} sx={{ ml: zdjecia ? 0 : 2, whiteSpace: "nowrap" }}>
                 {formatujIlosc(m.ilosc)} {m.jednostka}
               </Typography>
-            </ListItemButton>
-          ))}
+            );
+            const otworz = () => navigate(`/material/${m.id}`);
+            // Ze zdjęciem wiersz jest dwa razy wyższy. Ilość stoi pod nazwą,
+            // żeby przy dużym zdjęciu na wąskim telefonie nazwa miała miejsce.
+            return zdjecia ? (
+              <ListItemButton key={m.id} divider onClick={otworz} sx={{ alignItems: "flex-start", gap: 2 }}>
+                <Miniatura sciezka={m.zdjecie} />
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography>{m.nazwa}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ my: 0.5 }}>
+                    {szczegoly}
+                  </Typography>
+                  {ilosc}
+                </Box>
+              </ListItemButton>
+            ) : (
+              <ListItemButton key={m.id} divider onClick={otworz}>
+                <ListItemText primary={m.nazwa} secondary={szczegoly} />
+                {ilosc}
+              </ListItemButton>
+            );
+          })}
           {wynik?.saKolejne && <Podpowiedz>Pokazano pierwsze {LIMIT_WYNIKOW} wyników. Doprecyzuj wyszukiwanie.</Podpowiedz>}
         </List>
       )}
@@ -263,11 +279,10 @@ function Miniatura({ sciezka }: { sciezka: string | null }) {
   return (
     <Box
       sx={{
-        width: 64,
-        height: 64,
+        width: 144,
+        height: 144,
         flexShrink: 0,
-        mr: 2,
-        borderRadius: 2,
+        borderRadius: 3,
         overflow: "hidden",
         bgcolor: "action.hover",
         display: "flex",
@@ -276,7 +291,7 @@ function Miniatura({ sciezka }: { sciezka: string | null }) {
       }}
     >
       {!sciezka ? (
-        <Typography variant="caption" color="text.secondary" align="center" sx={{ lineHeight: 1.2 }}>
+        <Typography variant="body2" color="text.secondary" align="center">
           Brak zdjęcia
         </Typography>
       ) : link && !blad ? (
