@@ -3,7 +3,7 @@
 Aplikacja do obsługi magazynu materiałów: wyszukiwanie, wydania, przyjęcia
 i lista wydań do zaksięgowania w SAP. Korzysta z niej kilka osób. Ta sama aplikacja
 działa na telefonie z Androidem i jako program na Windows (wspólny kod Kotlin),
-a także jako strona na GitHub Pages (osobny kod w React, bez katalogu części).
+a także jako strona na GitHub Pages (osobny kod w React; katalog części tylko po zalogowaniu).
 Wszystkie trzy korzystają z tego samego projektu Supabase.
 
 ## Stack
@@ -42,7 +42,10 @@ Wszystkie trzy korzystają z tego samego projektu Supabase.
 - React + TypeScript + Vite, MUI (Material), `@supabase/supabase-js`, `react-router`
   (`HashRouter`: adresy `#/material/12`, „Wstecz” przeglądarki działa jak w aplikacji),
   `vite-plugin-pwa` (instalacja na ekranie głównym). Testy: Vitest (`npm --prefix web test`).
-- Te same ekrany co aplikacja, **bez katalogu części** (strona jest publiczna).
+- Te same ekrany co aplikacja. Strona i repozytorium są publiczne, więc katalogu części nie ma
+  w kodzie: ekran „Katalog części” (tylko po zalogowaniu) pobiera `katalog.json` z prywatnego
+  bucketu `katalog`. Wyszukiwarka przepisana w `web/src/logika/katalog.ts`; zmieniaj ją razem
+  z `katalog/Wyszukiwarka.kt` (te same testy w `katalog.test.ts`).
 - Logika jest przepisana w `web/src/logika` (login, ilości, daty, dane formularzy, statusy,
   komunikaty błędów). Zmieniając te reguły w Kotlinie, zmień je też w TypeScripcie (i testy).
 - Lokalnie: `npm --prefix web run dev` (Claude: konfiguracja „strona” w `.claude/launch.json`);
@@ -163,8 +166,15 @@ baza (RLS i funkcje), więc nie przenoś tej logiki wyłącznie do aplikacji.
   Działa bez logowania i bez internetu (wejście z ekranu logowania, z ekranu
   „Brak połączenia” i z menu). Nie ma w nim stanów, tylko numer SAP, nazwy, miejsca
   i dostawców. Nie ma związku z tabelą `materialy`.
-- Nowy arkusz: `python narzedzia/katalog_z_excela.py "<plik.xlsx>"`, potem nowa wersja
-  aplikacji i programu. Arkusz „Data”: A pełny SAP, B krótki tekst, C miejsce (tylko te pozycje
+- Nowy arkusz: `python narzedzia/katalog_z_excela.py "<plik.xlsx>"`, potem wgraj ten plik
+  w panelu Supabase (Storage → `katalog` → `katalog.json`, zmiana 009). Strona pokazuje go od razu,
+  a aplikacja i program pobierają go po zalogowaniu; nowa wersja aplikacji tylko po to, żeby
+  zaktualizować katalog wbudowany.
+- Aplikacja przy otwarciu katalogu (gdy ktoś jest zalogowany) sprawdza listę plików w buckecie
+  i pobiera `katalog.json`, gdy zmieniło się jego id lub data (`Ustawienia.wersjaKatalogu`).
+  Zapisuje go w `plikPobranegoKatalogu` (Android: pliki aplikacji, Windows: `%LOCALAPPDATA%\MagazynUR`),
+  więc działa potem bez logowania i internetu. Pokazuje nowszy z wbudowanego i pobranego
+  (pole `utworzono`; przy tej samej dacie pobrany). Błędy pobierania pomija. Arkusz „Data”: A pełny SAP, B krótki tekst, C miejsce (tylko te pozycje
   trafiają do katalogu). Arkusze „Magazyn*”: A końcówka numeru (pełny = „538” +
   końcówka dopełniona zerami do 12 znaków), B pełniejsza nazwa, C dostawca; służą
   do wyszukiwania i są pokazywane obok nazwy z SAP.

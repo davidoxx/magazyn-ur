@@ -1,6 +1,7 @@
 export { EdycjaMaterialu as FormularzMaterialuEdycja, NowyMaterial as FormularzMaterialuNowy } from "./FormularzMaterialu";
 export { Glowny } from "./Glowny";
 export { Karta } from "./Karta";
+export { KatalogCzesci } from "./Katalog";
 export { Logowanie } from "./Logowanie";
 export { Maszyny } from "./Maszyny";
 export { Operacja } from "./Operacja";

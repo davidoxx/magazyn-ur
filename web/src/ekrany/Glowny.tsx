@@ -31,7 +31,7 @@ import { emailNaLogin } from "../logika/login";
 import { statusRuchu, type Material, type OstatnieWydanie } from "../logika/typy";
 import { useSesja } from "../sesja";
 import { dane, podpisanyLink, supabase } from "../supabase";
-import { IkonaDodaj, IkonaDoSap, IkonaWiecej } from "../ui/Ikony";
+import { IkonaDodaj, IkonaDoSap, IkonaKatalog, IkonaWiecej } from "../ui/Ikony";
 import { Ekran, Podpowiedz } from "../ui/wspolne";
 import { OAplikacjiDialog, ZmianaHaslaDialog } from "./Okienka";
 
@@ -120,6 +120,7 @@ export function Glowny() {
   const dol = (
     <Paper elevation={3} sx={{ position: "fixed", bottom: 0, left: 0, right: 0, pb: "env(safe-area-inset-bottom)" }}>
       <BottomNavigation showLabels value={false}>
+        <BottomNavigationAction label="Katalog części" onClick={() => navigate("/katalog")} icon={<IkonaKatalog />} />
         {lider && (
           <BottomNavigationAction
             label="Do zaksięgowania"

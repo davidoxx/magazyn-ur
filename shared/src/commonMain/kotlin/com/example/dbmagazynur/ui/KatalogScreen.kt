@@ -187,7 +187,7 @@ private fun KatalogScreenPreview() {
     DBMagazynURTheme {
         KatalogScreen(
             fraza = "ecorail2",
-            opis = "Czesci zam 2508.xlsx · 10 332 pozycji",
+            opis = "Czesci zam 2508.xlsx z 08.10.2026 · 10 332 pozycji",
             wynik = WynikKatalogu(
                 listOf(
                     PozycjaKatalogu(

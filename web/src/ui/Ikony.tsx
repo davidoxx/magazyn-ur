@@ -20,6 +20,12 @@ export const IkonaDoSap = (p: SvgIconProps) => (
   </SvgIcon>
 );
 
+export const IkonaKatalog = (p: SvgIconProps) => (
+  <SvgIcon {...p}>
+    <path d="M18,2H6c-1.1,0 -2,0.9 -2,2v16c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2zM6,4h5v8l-2.5,-1.5L6,12V4z" />
+  </SvgIcon>
+);
+
 export const IkonaDodaj = (p: SvgIconProps) => (
   <SvgIcon {...p}>
     <path d="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />

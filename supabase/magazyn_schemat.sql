@@ -628,6 +628,19 @@ create policy "zdjecia: usuwanie" on storage.objects
 
 
 -- ---------------------------------------------------------------------
+-- 6a. KATALOG CZĘŚCI (prywatny bucket "katalog", plik katalog.json)
+--     Wgrywa go administrator w panelu (Storage -> katalog -> Upload).
+--     Zalogowani mogą go tylko pobrać; bez polityk zapisu zmienia go tylko panel.
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('katalog', 'katalog', false);
+
+create policy "katalog: odczyt" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'katalog' and (select public.moj_poziom()) >= 1);
+
+
+-- ---------------------------------------------------------------------
 -- 7. PIERWSZY ADMINISTRATOR
 --    Załóż swoje konto w Authentication -> Users, a potem uruchom
 --    (nazwa na start = adres e-mail):

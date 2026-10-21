@@ -16,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.LocalPlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import com.example.dbmagazynur.data.zbudujImageLoader
 import com.example.dbmagazynur.katalog.KatalogViewModel
+import com.example.dbmagazynur.katalog.plikPobranegoKatalogu
 import com.example.dbmagazynur.maszyny.MaszynyViewModel
 import com.example.dbmagazynur.materialy.FormularzMaterialuViewModel
 import com.example.dbmagazynur.materialy.KartaViewModel
@@ -42,7 +44,8 @@ fun MagazynAplikacja() {
 @Composable
 fun MagazynApp(vm: SesjaViewModel = viewModel { SesjaViewModel() }) {
     // Katalog części działa bez logowania i bez internetu, więc przykrywa każdy ekran
-    val katalog: KatalogViewModel = viewModel { KatalogViewModel() }
+    val kontekst = LocalPlatformContext.current
+    val katalog: KatalogViewModel = viewModel { KatalogViewModel(plikPobranegoKatalogu(kontekst)) }
     if (katalog.otwarty) {
         Wstecz(onBack = katalog::zamknij)
         KatalogScreen(
