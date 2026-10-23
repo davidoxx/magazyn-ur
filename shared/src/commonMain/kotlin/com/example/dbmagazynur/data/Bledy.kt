@@ -30,10 +30,14 @@ fun Throwable.komunikat(): String = when (this) {
     is PostgrestRestException -> when {
         code == "23505" && "nr_sap" in error -> "Materiał z tym numerem SAP już istnieje"
         code == "23505" && "maszyny_kod" in error -> "Maszyna z tym kodem już istnieje"
+        code == "23505" && "stacje_nazwa_w_obszarze" in error -> "Stacja o tej nazwie już jest w tym obszarze"
+        code == "23505" && "stacje_kod" in error -> "Stacja z tym kodem już istnieje"
         code == "23505" -> "Taki wpis już istnieje"
         // Usuwanie wiersza, do którego odwołuje się historia ruchów
         code == "23503" && "\"maszyny\"" in error ->
             "Tej maszyny nie można usunąć, bo ma wydania w historii. Wycofaj ją zamiast tego."
+        code == "23503" && "\"stacje\"" in error ->
+            "Tej stacji nie można usunąć, bo jest przypisana do materiałów. Wycofaj ją zamiast tego."
         code == "23503" -> "Nie można usunąć, bo jest używane w historii ruchów."
         code == "42501" -> "Brak uprawnień"
         else -> error

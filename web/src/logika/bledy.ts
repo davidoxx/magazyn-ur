@@ -42,9 +42,14 @@ export function komunikat(e: unknown): string {
   if (czyBladPostgrest(e)) {
     if (e.code === "23505" && e.message.includes("nr_sap")) return "Materiał z tym numerem SAP już istnieje";
     if (e.code === "23505" && e.message.includes("maszyny_kod")) return "Maszyna z tym kodem już istnieje";
+    if (e.code === "23505" && e.message.includes("stacje_nazwa_w_obszarze")) return "Stacja o tej nazwie już jest w tym obszarze";
+    if (e.code === "23505" && e.message.includes("stacje_kod")) return "Stacja z tym kodem już istnieje";
     if (e.code === "23505") return "Taki wpis już istnieje";
     if (e.code === "23503" && e.message.includes('"maszyny"')) {
       return "Tej maszyny nie można usunąć, bo ma wydania w historii. Wycofaj ją zamiast tego.";
+    }
+    if (e.code === "23503" && e.message.includes('"stacje"')) {
+      return "Tej stacji nie można usunąć, bo jest przypisana do materiałów. Wycofaj ją zamiast tego.";
     }
     if (e.code === "23503") return "Nie można usunąć, bo jest używane w historii ruchów.";
     if (e.code === "42501") return "Brak uprawnień";

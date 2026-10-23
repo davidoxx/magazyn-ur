@@ -108,6 +108,32 @@ create table public.maszyny (
 
 
 -- ---------------------------------------------------------------------
+-- 2b. LOKALIZACJE FUNKCJONALNE (stacje, do których materiał jest przeznaczony)
+--     Osobna lista od maszyn. Obszary F1, F2, F3; listę edytuje poziom 2+.
+--     Materiał może mieć kilka stacji; przypisania zmieniają tylko funkcje
+--     zmien_stacje_materialu i dodaj_material. Stację przypisaną do materiałów
+--     się wycofuje (aktywna = false), usunąć da się tylko nieużywaną.
+-- ---------------------------------------------------------------------
+create table public.stacje (
+  id         bigint generated always as identity primary key,
+  obszar     text not null check (obszar in ('F1', 'F2', 'F3')),
+  nazwa      text not null,
+  kod        text unique,                     -- lokalizacja funkcjonalna w SAP (opcjonalna)
+  aktywna    boolean not null default true,   -- wycofana znika z listy wyboru
+  utworzono  timestamptz not null default now(),
+  constraint stacje_nazwa_w_obszarze unique (obszar, nazwa)
+);
+
+create table public.materialy_stacje (
+  material_id bigint not null references public.materialy(id) on delete cascade,
+  stacja_id   bigint not null references public.stacje(id),
+  primary key (material_id, stacja_id)
+);
+
+create index materialy_stacje_stacja_idx on public.materialy_stacje (stacja_id);
+
+
+-- ---------------------------------------------------------------------
 -- 3. RUCHY MAGAZYNOWE (wydania, przyjęcia i utworzenie materiału w jednej tabeli)
 --    UTWORZENIE: wpis przy dodaniu materiału, ilosc = stan początkowy (może być 0).
 -- ---------------------------------------------------------------------
@@ -303,17 +329,59 @@ begin
 end;
 $$;
 
--- Poziom 1+: dodanie materiału z numerem zamówienia (wpis w historii robi trigger
--- po_dodaniu_materialu, tu dopisujemy do niego numer)
+-- Poziom 1+: zmiana stacji materiału. Dostaje tylko zmiany (dodane i usunięte),
+-- więc dwie osoby edytujące ten sam materiał nie kasują sobie nawzajem stacji.
+-- Nowo dodana stacja musi być aktywna; już przypisana wycofana może zostać.
+create function public.zmien_stacje_materialu(
+  p_material_id bigint,
+  p_dodaj       bigint[] default null,
+  p_usun        bigint[] default null
+)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_dodaj bigint[] := coalesce(p_dodaj, '{}');
+  v_usun  bigint[] := coalesce(p_usun, '{}');
+begin
+  if public.moj_poziom() < 1 then
+    raise exception 'Brak uprawnień';
+  end if;
+  if not exists (select 1 from public.materialy where id = p_material_id) then
+    raise exception 'Nie ma takiego materiału';
+  end if;
+  if exists (select 1
+               from unnest(v_dodaj) as s(id)
+              where not exists (select 1 from public.materialy_stacje ms
+                                 where ms.material_id = p_material_id and ms.stacja_id = s.id)
+                and not exists (select 1 from public.stacje st
+                                 where st.id = s.id and st.aktywna)) then
+    raise exception 'Nie ma takiej stacji albo jest wycofana';
+  end if;
+
+  delete from public.materialy_stacje
+   where material_id = p_material_id
+     and stacja_id = any(v_usun);
+
+  insert into public.materialy_stacje (material_id, stacja_id)
+  select distinct p_material_id, s.id
+    from unnest(v_dodaj) as s(id)
+  on conflict do nothing;
+end;
+$$;
+
+-- Poziom 1+: dodanie materiału z numerem zamówienia i stacjami (wpis w historii
+-- robi trigger po_dodaniu_materialu, tu dopisujemy do niego numer)
 create function public.dodaj_material(
   p_nazwa         text,
   p_typ           text,
-  p_nr_sap        text    default null,
-  p_miejsce       text    default null,
-  p_jednostka     text    default 'szt',
-  p_opis          text    default null,
-  p_ilosc         numeric default 0,
-  p_nr_zamowienia text    default null
+  p_nr_sap        text     default null,
+  p_miejsce       text     default null,
+  p_jednostka     text     default 'szt',
+  p_opis          text     default null,
+  p_ilosc         numeric  default 0,
+  p_nr_zamowienia text     default null,
+  p_stacje        bigint[] default null
 )
 returns public.materialy
 language plpgsql security definer set search_path = ''
@@ -337,6 +405,10 @@ begin
      set nr_zamowienia = nullif(btrim(p_nr_zamowienia), '')
    where material_id = v_material.id
      and typ = 'UTWORZENIE';
+
+  if p_stacje is not null then
+    perform public.zmien_stacje_materialu(v_material.id, p_dodaj => p_stacje);
+  end if;
 
   return v_material;
 end;
@@ -498,6 +570,8 @@ $$;
 alter table public.uzytkownicy enable row level security;
 alter table public.materialy   enable row level security;
 alter table public.maszyny     enable row level security;
+alter table public.stacje      enable row level security;
+alter table public.materialy_stacje enable row level security;
 alter table public.ruchy       enable row level security;
 
 -- Tabele: tylko zalogowani. Kolumny "ilosc" nie da się edytować bezpośrednio.
@@ -507,6 +581,8 @@ revoke all on table
   public.uzytkownicy,
   public.materialy,
   public.maszyny,
+  public.stacje,
+  public.materialy_stacje,
   public.ruchy,
   public.wydania_do_sap,
   public.ostatnie_wydania
@@ -521,6 +597,11 @@ grant update (nazwa, opis, typ, nr_sap, miejsce, jednostka, zdjecie)
 grant select, delete               on public.maszyny        to authenticated;
 grant insert (nazwa, kod, aktywna) on public.maszyny        to authenticated;
 grant update (nazwa, kod, aktywna) on public.maszyny        to authenticated;
+grant select, delete               on public.stacje         to authenticated;
+grant insert (obszar, nazwa, kod, aktywna) on public.stacje to authenticated;
+grant update (obszar, nazwa, kod, aktywna) on public.stacje to authenticated;
+-- Przypisania stacji zmieniają tylko zmien_stacje_materialu i dodaj_material
+grant select                       on public.materialy_stacje to authenticated;
 grant select                       on public.ruchy          to authenticated;
 grant select                       on public.wydania_do_sap to authenticated;
 grant select                       on public.ostatnie_wydania to authenticated;
@@ -539,7 +620,8 @@ revoke execute on function
   public.po_dodaniu_materialu(),
   public.przed_usunieciem_materialu(),
   public.szukaj_materialow(text),
-  public.dodaj_material(text, text, text, text, text, text, numeric, text),
+  public.zmien_stacje_materialu(bigint, bigint[], bigint[]),
+  public.dodaj_material(text, text, text, text, text, text, numeric, text, bigint[]),
   public.wydaj(bigint, numeric, bigint, text),
   public.przyjmij(bigint, numeric, text, text),
   public.zaksieguj_w_sap(bigint[]),
@@ -551,7 +633,8 @@ from public, anon, authenticated;
 grant execute on function public.moj_poziom()                        to authenticated;
 grant execute on function public.szukaj_materialow(text)             to authenticated;
 grant execute on function public.wydaj(bigint, numeric, bigint, text) to authenticated;
-grant execute on function public.dodaj_material(text, text, text, text, text, text, numeric, text)
+grant execute on function public.zmien_stacje_materialu(bigint, bigint[], bigint[]) to authenticated;
+grant execute on function public.dodaj_material(text, text, text, text, text, text, numeric, text, bigint[])
                                                                      to authenticated;
 grant execute on function public.przyjmij(bigint, numeric, text, text) to authenticated;
 grant execute on function public.zaksieguj_w_sap(bigint[])           to authenticated;
@@ -598,6 +681,27 @@ create policy "maszyny: edycja" on public.maszyny
 create policy "maszyny: usuwanie" on public.maszyny
   for delete to authenticated
   using ((select public.moj_poziom()) >= 3);
+
+create policy "stacje: odczyt" on public.stacje
+  for select to authenticated
+  using ((select public.moj_poziom()) >= 1);
+
+create policy "stacje: dodawanie" on public.stacje
+  for insert to authenticated
+  with check ((select public.moj_poziom()) >= 2);
+
+create policy "stacje: edycja" on public.stacje
+  for update to authenticated
+  using ((select public.moj_poziom()) >= 2)
+  with check ((select public.moj_poziom()) >= 2);
+
+create policy "stacje: usuwanie" on public.stacje
+  for delete to authenticated
+  using ((select public.moj_poziom()) >= 2);
+
+create policy "materialy_stacje: odczyt" on public.materialy_stacje
+  for select to authenticated
+  using ((select public.moj_poziom()) >= 1);
 
 create policy "ruchy: odczyt" on public.ruchy
   for select to authenticated

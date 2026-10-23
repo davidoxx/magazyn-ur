@@ -5,5 +5,6 @@ export { KatalogCzesci } from "./Katalog";
 export { Logowanie } from "./Logowanie";
 export { Maszyny } from "./Maszyny";
 export { Operacja } from "./Operacja";
+export { Stacje } from "./Stacje";
 export { Uzytkownicy } from "./Uzytkownicy";
 export { WydaniaSap } from "./WydaniaSap";

@@ -115,7 +115,7 @@ class KartaViewModel : ViewModel() {
             bladWczytania = null
             try {
                 val aktualny = supabase.from("materialy")
-                    .select { filter { eq("id", id) } }
+                    .select(Columns.raw(KOLUMNY_MATERIALU)) { filter { eq("id", id) } }
                     .decodeSingleOrNull<Material>()
                 if (aktualny == null) {
                     bladWczytania = "Nie ma takiego materiału. Mógł zostać usunięty."

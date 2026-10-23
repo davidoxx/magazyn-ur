@@ -82,6 +82,13 @@ Zasady, których pilnuje baza (aplikacja ma je tylko odzwierciedlać):
 - Numer zamówienia (`ruchy.nr_zamowienia`, opcjonalny): przy przyjęciu
   `przyjmij(p_material_id, p_ilosc, p_uwagi, p_nr_zamowienia)` i przy dodaniu materiału;
   widać go w historii na karcie.
+- Lokalizacje funkcjonalne (stacje, do których materiał jest przeznaczony): tabela `stacje`
+  (obszar `F1`/`F2`/`F3`, nazwa unikalna w obszarze, opcjonalny `kod`, `aktywna`), osobna od
+  `maszyny`. Listę edytuje poziom 2+. Materiał może mieć kilka stacji (`materialy_stacje`);
+  przypisania zmieniają tylko RPC `zmien_stacje_materialu(p_material_id, p_dodaj, p_usun)`
+  (same różnice, żeby dwie osoby nie kasowały sobie zmian) i `dodaj_material(..., p_stacje)`.
+  Wycofanej stacji nie da się przypisać do kolejnego materiału, przypisanej nie da się usunąć.
+  Materiał ze stacjami: `select=*,stacje(...)` (`KOLUMNY_MATERIALU`).
 - Materiał typu `SAP` musi mieć `nr_sap`, materiał `KOSZTOWY` nie może go mieć.
 - Typu materiału nie można zmienić (w żadną stronę), jeśli ma wydania
   niezaksięgowane i nieanulowane (trigger `przed_zmiana_typu`). Materiał kosztowy
@@ -107,7 +114,7 @@ Zasady, których pilnuje baza (aplikacja ma je tylko odzwierciedlać):
 |---|---|
 | 0 | brak dostępu; konto nieaktywne (tak „usuwa się” pracownika z historią) |
 | 1 | wyszukiwanie, wydawanie (`wydaj`), przyjęcia (`przyjmij`), dodawanie i edycja materiałów, zmiana własnego hasła |
-| 2 | jak 1, plus `zaksieguj_w_sap` i `anuluj_wydanie` |
+| 2 | jak 1, plus `zaksieguj_w_sap`, `anuluj_wydanie` i edycja lokalizacji funkcjonalnych (stacji) |
 | 3 | jak 2, plus `ustaw_poziom`, `wyczysc_historie`, usuwanie materiałów bez historii, edycja listy maszyn, zakładanie kont i reset haseł innym |
 
 Ukrywanie przycisków zależnie od poziomu to tylko wygoda. Uprawnienia sprawdza
@@ -188,6 +195,9 @@ baza (RLS i funkcje), więc nie przenoś tej logiki wyłącznie do aplikacji.
 - Wydanie idzie na maszynę / miejsce funkcjonalne wybierane z listy w bazie
   (obowiązkowe dla materiałów SAP, opcjonalne dla kosztowych). Listę edytuje poziom 3
   w aplikacji.
+- Lokalizacja funkcjonalna materiału to stacja z osobnej listy (nie maszyna do wydań),
+  podzielonej na F1, F2 i F3. Materiał może mieć kilka stacji. Wybór w formularzu: najpierw
+  F1/F2/F3, potem lista stacji z obszaru (menu ⋮ „Lokalizacje funkcjonalne” dla poziomu 2+).
 
 ## Otwarte kwestie
 Nie zakładaj odpowiedzi. Jeśli zadanie od nich zależy, zapytaj.

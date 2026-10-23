@@ -1,5 +1,7 @@
 package com.example.dbmagazynur.materialy
 
+import com.example.dbmagazynur.stacje.KOLUMNY_STACJI
+import com.example.dbmagazynur.stacje.Stacja
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -21,7 +23,12 @@ data class Material(
     val ilosc: Double,
     val jednostka: String,
     val zdjecie: String? = null,
+    // Lokalizacje funkcjonalne; tylko gdy zapytanie je dołącza (KOLUMNY_MATERIALU)
+    val stacje: List<Stacja> = emptyList(),
 )
+
+// Materiał z przypisanymi stacjami (przez tabelę materialy_stacje)
+const val KOLUMNY_MATERIALU = "*,stacje($KOLUMNY_STACJI)"
 
 // Ilość po polsku: "12", "12,5", "0,125" (baza trzyma do 3 miejsc po przecinku)
 fun formatujIlosc(ilosc: Double): String =

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { daneMaszyny, daneMaterialu, parametryNowegoMaterialu } from "./dane";
+import { daneMaszyny, daneMaterialu, daneStacji, parametryNowegoMaterialu, zmianyStacji } from "./dane";
 import { formatujDate, odmiana } from "./formatowanie";
 import { formatujIlosc, parsujIlosc } from "./ilosc";
 import { emailNaLogin, loginNaEmail, normalizujLogin } from "./login";
 import { doPorownania, pasujeDoFrazy } from "./szukanie";
-import { posortujMaszyny, posortujUzytkownikow, statusRuchu } from "./typy";
+import { opisStacji, posortujMaszyny, posortujStacje, posortujUzytkownikow, statusRuchu, type Stacja } from "./typy";
 import { rozmiarDocelowy } from "./zdjecia";
 import type { Wynik } from "./wynik";
 
@@ -127,6 +127,31 @@ describe("dane formularzy", () => {
     // Tylko parametry funkcji
     expect(Object.keys(p).filter((k) => !k.startsWith("p_"))).toEqual([]);
     expect(parametryNowegoMaterialu(wartosc(dane())!, "  ").p_nr_zamowienia).toBeNull();
+  });
+
+  test("stacje nowego materiału i zmiany przy edycji", () => {
+    const w = wartosc(dane())!;
+    expect(parametryNowegoMaterialu(w, "", [1, 2, 1]).p_stacje).toEqual([1, 2]);
+    expect("p_stacje" in parametryNowegoMaterialu(w, "")).toBe(false);
+    expect(zmianyStacji(7, [1, 2], [2, 3])).toEqual({ p_material_id: 7, p_dodaj: [3], p_usun: [1] });
+    // Bez zmian (także inna kolejność) nie ma wywołania
+    expect(zmianyStacji(7, [1, 2], [2, 1])).toBeNull();
+  });
+
+  test("stacja: obszar, nazwa, pusty kod jako null", () => {
+    expect(blad(daneStacji(null, "Stacja 10", "", true))).toBe("Wybierz F1, F2 albo F3");
+    expect(blad(daneStacji("F4", "Stacja 10", "", true))).toBe("Wybierz F1, F2 albo F3");
+    expect(blad(daneStacji("F1", "  ", "", true))).toBe("Wpisz nazwę stacji");
+    expect(wartosc(daneStacji("F2", " Stacja 10 ", "  ", false))).toEqual({ obszar: "F2", nazwa: "Stacja 10", kod: null, aktywna: false });
+  });
+
+  test("stacje: sortowanie i opis", () => {
+    const s = (id: number, obszar: string, nazwa: string, aktywna = true, kod: string | null = null): Stacja => ({ id, obszar, nazwa, kod, aktywna });
+    const lista = [s(1, "F2", "Prasa"), s(2, "F1", "Zgrzewarka"), s(3, "F1", "Stara", false), s(4, "F1", "Śrubowanie", true, "PL01-F1-ST40")];
+    // Obszar, aktywne najpierw, „Ś” po „S”, a nie za „Z”
+    expect(posortujStacje(lista).map((x) => x.id)).toEqual([4, 2, 3, 1]);
+    expect(opisStacji(lista[3])).toBe("F1 · Śrubowanie (PL01-F1-ST40)");
+    expect(opisStacji(lista[0])).toBe("F2 · Prasa");
   });
 
   test("maszyna: pusty kod jako null", () => {

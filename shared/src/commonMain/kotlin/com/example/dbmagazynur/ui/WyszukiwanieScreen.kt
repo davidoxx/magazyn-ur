@@ -100,6 +100,8 @@ fun WyszukiwanieScreen(
     // Tylko dla lidera (poziom 2+); null ukrywa wejście na listę
     liczbaDoSap: Int?,
     onWydaniaSap: (() -> Unit)?,
+    // Tylko dla lidera (poziom 2+)
+    onStacje: (() -> Unit)?,
     // Tylko dla administratora (poziom 3)
     onMaszyny: (() -> Unit)?,
     onUzytkownicy: (() -> Unit)?,
@@ -135,6 +137,15 @@ fun WyszukiwanieScreen(
                                 onClick = {},
                                 enabled = false,
                             )
+                            if (onStacje != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Lokalizacje funkcjonalne") },
+                                    onClick = {
+                                        menu = false
+                                        onStacje()
+                                    },
+                                )
+                            }
                             if (onMaszyny != null) {
                                 DropdownMenuItem(
                                     text = { Text("Maszyny") },
@@ -428,6 +439,7 @@ private fun WyszukiwanieScreenPreview() {
             onStarszeWydania = {},
             liczbaDoSap = 3,
             onWydaniaSap = {},
+            onStacje = {},
             onMaszyny = null,
             onUzytkownicy = null,
             onKatalog = {},

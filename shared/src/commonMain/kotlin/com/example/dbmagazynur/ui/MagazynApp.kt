@@ -31,6 +31,7 @@ import com.example.dbmagazynur.sesja.SesjaViewModel
 import com.example.dbmagazynur.ui.theme.DBMagazynURTheme
 import com.example.dbmagazynur.uzytkownicy.UzytkownicyViewModel
 import com.example.dbmagazynur.wydania.OstatnieWydaniaViewModel
+import com.example.dbmagazynur.stacje.StacjeViewModel
 
 // Punkt wejścia wspólny dla Androida (MainActivity) i Windows (Main.kt)
 @Composable
@@ -80,6 +81,7 @@ fun MagazynApp(vm: SesjaViewModel = viewModel { SesjaViewModel() }) {
             val sap: WydaniaSapViewModel = viewModel(key = "sap-${sesja.userId}") { WydaniaSapViewModel() }
             val formularz: FormularzMaterialuViewModel = viewModel(key = "formularz-${sesja.userId}") { FormularzMaterialuViewModel() }
             val maszyny: MaszynyViewModel = viewModel(key = "maszyny-${sesja.userId}") { MaszynyViewModel() }
+            val stacje: StacjeViewModel = viewModel(key = "stacje-${sesja.userId}") { StacjeViewModel() }
             val uzytkownicy: UzytkownicyViewModel = viewModel(key = "uzytkownicy-${sesja.userId}") { UzytkownicyViewModel() }
             val ostatnie: OstatnieWydaniaViewModel = viewModel(key = "ostatnie-${sesja.userId}") { OstatnieWydaniaViewModel() }
             // Ukrywanie wejść to tylko wygoda, uprawnienia sprawdza baza
@@ -194,6 +196,56 @@ fun MagazynApp(vm: SesjaViewModel = viewModel { SesjaViewModel() }) {
                         onZamknij = maszyny::zamknijFormularz,
                     )
                 }
+            } else if (stacje.otwarta) {
+                Wstecz(onBack = stacje::zamknij)
+                StacjeScreen(
+                    lista = stacje.lista,
+                    obszar = stacje.obszar,
+                    wczytywanie = stacje.wczytywanie,
+                    blad = stacje.blad,
+                    komunikat = stacje.komunikat,
+                    onObszar = stacje::wybierzObszar,
+                    onKomunikatPokazany = stacje::komunikatPokazany,
+                    onPonow = stacje::wczytaj,
+                    onDodaj = stacje::dodaj,
+                    onEdytuj = stacje::edytuj,
+                    onWstecz = stacje::zamknij,
+                    onWyloguj = vm::wyloguj,
+                )
+                if (stacje.formularzOtwarty) {
+                    StacjaDialog(
+                        nowa = stacje.edytowana == null,
+                        obszar = stacje.obszarStacji,
+                        nazwa = stacje.nazwa,
+                        kod = stacje.kod,
+                        aktywna = stacje.aktywna,
+                        potwierdzUsuniecie = stacje.potwierdzUsuniecie,
+                        trwa = stacje.trwa,
+                        blad = stacje.bladFormularza,
+                        onObszarChange = { stacje.obszarStacji = it },
+                        onNazwaChange = { stacje.nazwa = it },
+                        onKodChange = { stacje.kod = it },
+                        onAktywnaChange = { stacje.aktywna = it },
+                        onPotwierdzUsuniecie = { stacje.potwierdzUsuniecie = it },
+                        onZapisz = stacje::zapisz,
+                        onUsun = stacje::usun,
+                        onZamknij = stacje::zamknijFormularz,
+                    )
+                }
+            } else if (formularz.otwarty && formularz.wyborStacji) {
+                Wstecz(onBack = formularz::wsteczWyboruStacji)
+                WyborStacjiScreen(
+                    obszar = formularz.obszarWyboru,
+                    stacje = formularz.dostepneStacje,
+                    wybrane = formularz.stacje,
+                    blad = formularz.bladStacji,
+                    onObszar = formularz::wybierzObszar,
+                    onPonow = formularz::wczytajStacje,
+                    onPrzelacz = formularz::przelaczStacje,
+                    onWstecz = formularz::wsteczWyboruStacji,
+                    onGotowe = formularz::zamknijWyborStacji,
+                    onWyloguj = vm::wyloguj,
+                )
             } else if (formularz.otwarty) {
                 Wstecz(onBack = formularz::zamknij)
                 FormularzMaterialuScreen(
@@ -205,6 +257,7 @@ fun MagazynApp(vm: SesjaViewModel = viewModel { SesjaViewModel() }) {
                     jednostka = formularz.jednostka,
                     iloscTekst = formularz.iloscTekst,
                     nrZamowienia = formularz.nrZamowienia,
+                    stacje = formularz.stacje,
                     opis = formularz.opis,
                     trwa = formularz.trwa,
                     blad = formularz.blad,
@@ -215,6 +268,8 @@ fun MagazynApp(vm: SesjaViewModel = viewModel { SesjaViewModel() }) {
                     onJednostkaChange = { formularz.jednostka = it },
                     onIloscChange = { formularz.iloscTekst = it },
                     onNrZamowieniaChange = { formularz.nrZamowienia = it },
+                    onWybierzStacje = formularz::pokazWyborStacji,
+                    onUsunStacje = formularz::usunStacje,
                     onOpisChange = { formularz.opis = it },
                     onZapisz = formularz::zapisz,
                     onWstecz = formularz::zamknij,
@@ -251,6 +306,7 @@ fun MagazynApp(vm: SesjaViewModel = viewModel { SesjaViewModel() }) {
                     onStarszeWydania = ostatnie::wczytajStarsze,
                     liczbaDoSap = sap.liczba,
                     onWydaniaSap = if (lider) sap::otworz else null,
+                    onStacje = if (lider) stacje::otworz else null,
                     onMaszyny = if (administrator) maszyny::otworz else null,
                     onUzytkownicy = if (administrator) uzytkownicy::otworz else null,
                     onKatalog = katalog::otworz,

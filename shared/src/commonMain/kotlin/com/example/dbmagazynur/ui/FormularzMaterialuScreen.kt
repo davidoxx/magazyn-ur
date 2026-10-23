@@ -34,6 +34,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.dbmagazynur.materialy.TypMaterialu
 import com.example.dbmagazynur.ui.theme.DBMagazynURTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import com.example.dbmagazynur.stacje.Stacja
+import com.example.dbmagazynur.stacje.opis
 
 private val CZESTE_JEDNOSTKI = listOf("szt", "m", "kg", "l", "kpl", "opak")
 
@@ -50,6 +55,7 @@ fun FormularzMaterialuScreen(
     jednostka: String,
     iloscTekst: String,
     nrZamowienia: String,
+    stacje: List<Stacja>,
     opis: String,
     trwa: Boolean,
     blad: String?,
@@ -60,6 +66,8 @@ fun FormularzMaterialuScreen(
     onJednostkaChange: (String) -> Unit,
     onIloscChange: (String) -> Unit,
     onNrZamowieniaChange: (String) -> Unit,
+    onWybierzStacje: () -> Unit,
+    onUsunStacje: (Stacja) -> Unit,
     onOpisChange: (String) -> Unit,
     onZapisz: () -> Unit,
     onWstecz: () -> Unit,
@@ -128,6 +136,8 @@ fun FormularzMaterialuScreen(
                 keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            PoleStacji(stacje = stacje, enabled = !trwa, onWybierz = onWybierzStacje, onUsun = onUsunStacje)
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedTextField(
@@ -207,6 +217,33 @@ fun FormularzMaterialuScreen(
     }
 }
 
+// Lokalizacje funkcjonalne materiału: lista wybranych i przejście do wyboru F1 / F2 / F3
+@Composable
+private fun PoleStacji(stacje: List<Stacja>, enabled: Boolean, onWybierz: () -> Unit, onUsun: (Stacja) -> Unit) {
+    OutlinedCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(top = 12.dp, bottom = 4.dp)) {
+            Text(
+                "Lokalizacje funkcjonalne (opcjonalnie)",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            stacje.forEach { stacja ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp)) {
+                    Text(
+                        stacja.opis() + if (stacja.aktywna) "" else " (wycofana)",
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { onUsun(stacja) }, enabled = enabled) { Text("Usuń") }
+                }
+            }
+            TextButton(onClick = onWybierz, enabled = enabled, modifier = Modifier.padding(horizontal = 4.dp)) {
+                Text(if (stacje.isEmpty()) "Wybierz stację" else "Dodaj albo zmień stacje")
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun FormularzMaterialuScreenPreview() {
@@ -220,6 +257,7 @@ private fun FormularzMaterialuScreenPreview() {
             jednostka = "szt",
             iloscTekst = "",
             nrZamowienia = "",
+            stacje = listOf(Stacja(1, "F1", "Stacja 10", kod = "PL01-F1-ST10"), Stacja(2, "F2", "Prasa 1")),
             opis = "",
             trwa = false,
             blad = null,
@@ -230,6 +268,8 @@ private fun FormularzMaterialuScreenPreview() {
             onJednostkaChange = {},
             onIloscChange = {},
             onNrZamowieniaChange = {},
+            onWybierzStacje = {},
+            onUsunStacje = {},
             onOpisChange = {},
             onZapisz = {},
             onWstecz = {},

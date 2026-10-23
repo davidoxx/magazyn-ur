@@ -1,12 +1,13 @@
-import { Button, Chip, CircularProgress, InputAdornment, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Button, Card, Chip, CircularProgress, InputAdornment, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { komunikat } from "../logika/bledy";
-import { daneMaterialu, parametryNowegoMaterialu } from "../logika/dane";
-import type { Material, TypMaterialu } from "../logika/typy";
+import { daneMaterialu, parametryNowegoMaterialu, zmianyStacji } from "../logika/dane";
+import { opisStacji, posortujStacje, type Material, type Stacja, type TypMaterialu } from "../logika/typy";
 import { dane, supabase } from "../supabase";
 import { BladZPonow, Ekran, Ladowanie, PasekZPowrotem, useDane, useWstecz, zostawKomunikat } from "../ui/wspolne";
 import { pobierzMaterial } from "./Karta";
+import { WyborStacji } from "./Stacje";
 
 const CZESTE_JEDNOSTKI = ["szt", "m", "kg", "l", "kpl", "opak"];
 
@@ -52,6 +53,9 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
   // Tylko przy dodawaniu (opcjonalny); trafia do historii jako część wpisu „utworzenie”
   const [nrZamowienia, ustawNrZamowienia] = useState("");
   const [opis, ustawOpis] = useState(edytowany?.opis ?? "");
+  // Lokalizacje funkcjonalne (stacje), do których materiał jest przeznaczony
+  const [stacje, ustawStacje] = useState<Stacja[]>(() => posortujStacje(edytowany?.stacje ?? []));
+  const [wyborStacji, ustawWyborStacji] = useState(false);
   const [trwa, ustawTrwa] = useState(false);
   const [blad, ustawBlad] = useState<string | null>(null);
 
@@ -63,12 +67,16 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
     if (!wynik.ok) return ustawBlad(wynik.blad);
     ustawTrwa(true);
     try {
+      const wybrane = stacje.map((s) => s.id);
       const zapisany = await dane<Material | null>(
         edytowany
           ? supabase.from("materialy").update(wynik.wartosc).eq("id", edytowany.id).select().maybeSingle()
-          : supabase.rpc("dodaj_material", parametryNowegoMaterialu(wynik.wartosc, nrZamowienia)),
+          : supabase.rpc("dodaj_material", parametryNowegoMaterialu(wynik.wartosc, nrZamowienia, wybrane)),
       );
       if (!zapisany) throw new Error("Nie ma takiego materiału. Mógł zostać usunięty.");
+      // Stacje przy edycji osobnym wywołaniem i tylko po zmianie
+      const zmiany = edytowany && zmianyStacji(edytowany.id, (edytowany.stacje ?? []).map((s) => s.id), wybrane);
+      if (zmiany) await dane(supabase.rpc("zmien_stacje_materialu", zmiany));
       zostawKomunikat(nowy ? "Dodano materiał" : "Zapisano zmiany");
       // Nowy: formularz zamienia się w kartę; edycja: powrót na kartę
       if (nowy) navigate(`/material/${zapisany.id}`, { replace: true });
@@ -77,6 +85,11 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
       ustawBlad(komunikat(e));
       ustawTrwa(false);
     }
+  }
+
+  // Zaznaczenie na liście dodaje stację, ponowne ją odznacza
+  function przelaczStacje(stacja: Stacja) {
+    ustawStacje((obecne) => (obecne.some((s) => s.id === stacja.id) ? obecne.filter((s) => s.id !== stacja.id) : posortujStacje([...obecne, stacja])));
   }
 
   const bezPoprawek = { autoCapitalize: "none", autoCorrect: "off", spellCheck: false };
@@ -97,6 +110,25 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
           <TextField label="Numer SAP" value={nrSap} onChange={(e) => ustawNrSap(e.target.value)} disabled={trwa} fullWidth slotProps={{ htmlInput: bezPoprawek }} />
         )}
         <TextField label="Miejsce magazynowe (opcjonalnie)" value={miejsce} onChange={(e) => ustawMiejsce(e.target.value)} disabled={trwa} fullWidth slotProps={{ htmlInput: bezPoprawek }} />
+        <Card variant="outlined" sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+          <Typography variant="caption" color="text.secondary">
+            Lokalizacje funkcjonalne (opcjonalnie)
+          </Typography>
+          {stacje.map((s) => (
+            <Stack key={s.id} direction="row" sx={{ alignItems: "center" }}>
+              <Typography sx={{ flex: 1 }}>
+                {opisStacji(s)}
+                {s.aktywna ? "" : " (wycofana)"}
+              </Typography>
+              <Button size="small" disabled={trwa} onClick={() => przelaczStacje(s)}>
+                Usuń
+              </Button>
+            </Stack>
+          ))}
+          <Button sx={{ ml: -1 }} disabled={trwa} onClick={() => ustawWyborStacji(true)}>
+            {stacje.length ? "Dodaj albo zmień stacje" : "Wybierz stację"}
+          </Button>
+        </Card>
         <div>
           <TextField label="Jednostka" value={jednostka} onChange={(e) => ustawJednostke(e.target.value)} disabled={trwa} fullWidth slotProps={{ htmlInput: bezPoprawek }} />
           <Stack direction="row" spacing={1} sx={{ mt: 1, overflowX: "auto" }}>
@@ -134,6 +166,7 @@ function FormularzMaterialu({ edytowany, nazwa: poczatkowaNazwa = "" }: { edytow
           {trwa ? <CircularProgress size={22} color="inherit" /> : nowy ? "Dodaj materiał" : "Zapisz zmiany"}
         </Button>
       </Stack>
+      {wyborStacji && <WyborStacji wybrane={stacje} onPrzelacz={przelaczStacje} onZamknij={() => ustawWyborStacji(false)} />}
     </Ekran>
   );
 }

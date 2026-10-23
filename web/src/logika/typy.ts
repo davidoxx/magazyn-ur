@@ -15,6 +15,34 @@ export interface Material {
   ilosc: number;
   jednostka: string;
   zdjecie: string | null;
+  // Lokalizacje funkcjonalne; tylko gdy zapytanie je dołącza (KOLUMNY_MATERIALU)
+  stacje?: Stacja[];
+}
+
+// Obszary, na które dzielą się stacje (w bazie: check obszar in ('F1', 'F2', 'F3'))
+export const OBSZARY = ["F1", "F2", "F3"] as const;
+
+// Wiersz tabeli stacje: lokalizacja funkcjonalna, do której materiał jest przeznaczony.
+// Osobna lista od maszyn, na które idą wydania.
+export interface Stacja {
+  id: number;
+  obszar: string;
+  nazwa: string;
+  kod: string | null;
+  aktywna: boolean;
+}
+
+// Materiał z przypisanymi stacjami (przez tabelę materialy_stacje)
+export const KOLUMNY_MATERIALU = "*,stacje(id,obszar,nazwa,kod,aktywna)";
+
+// „F1 · Stacja 10 (PL01-F1-ST10)”
+export const opisStacji = (s: Pick<Stacja, "obszar" | "nazwa" | "kod">) => `${s.obszar} · ${s.kod ? `${s.nazwa} (${s.kod})` : s.nazwa}`;
+
+// Według obszaru, aktywne najpierw, potem alfabetycznie po polsku
+export function posortujStacje(lista: Stacja[]): Stacja[] {
+  return [...lista].sort(
+    (a, b) => a.obszar.localeCompare(b.obszar) || Number(!a.aktywna) - Number(!b.aktywna) || porownajPoPolsku(a.nazwa, b.nazwa),
+  );
 }
 
 export interface Maszyna {

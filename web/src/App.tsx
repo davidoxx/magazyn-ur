@@ -1,7 +1,7 @@
 import { Box, Button, Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
-import { FormularzMaterialuEdycja, FormularzMaterialuNowy, Glowny, Karta, KatalogCzesci, Logowanie, Maszyny, Operacja, Uzytkownicy, WydaniaSap } from "./ekrany";
+import { FormularzMaterialuEdycja, FormularzMaterialuNowy, Glowny, Karta, KatalogCzesci, Logowanie, Maszyny, Operacja, Stacje, Uzytkownicy, WydaniaSap } from "./ekrany";
 import { useSesja } from "./sesja";
 import { Ladowanie } from "./ui/wspolne";
 
@@ -46,6 +46,7 @@ export function App() {
       <Route path="/nowy" element={<FormularzMaterialuNowy />} />
       <Route path="/katalog" element={<KatalogCzesci />} />
       <Route path="/sap" element={tylko(2, <WydaniaSap />)} />
+      <Route path="/stacje" element={tylko(2, <Stacje />)} />
       <Route path="/maszyny" element={tylko(3, <Maszyny />)} />
       <Route path="/uzytkownicy" element={tylko(3, <Uzytkownicy />)} />
       <Route path="*" element={<Navigate to="/" replace />} />

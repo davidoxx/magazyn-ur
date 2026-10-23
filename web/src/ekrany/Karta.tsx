@@ -5,7 +5,7 @@ import { komunikat } from "../logika/bledy";
 import { formatujDate } from "../logika/formatowanie";
 import { formatujIlosc } from "../logika/ilosc";
 import { emailNaLogin } from "../logika/login";
-import { KOLUMNY_HISTORII, opisMaszyny, statusRuchu, type Material, type Ruch } from "../logika/typy";
+import { KOLUMNY_HISTORII, KOLUMNY_MATERIALU, opisMaszyny, opisStacji, posortujStacje, statusRuchu, type Material, type Ruch } from "../logika/typy";
 import { BUCKET_ZDJEC, nowaSciezkaZdjecia, przygotujZdjecie } from "../logika/zdjecia";
 import { dane, podpisanyLink, supabase } from "../supabase";
 import { BladZPonow, Ekran, Ladowanie, PasekZPowrotem, useDane, useKomunikat, useWstecz } from "../ui/wspolne";
@@ -15,7 +15,7 @@ import { Potwierdzenie } from "./Okienka";
 const STRONA_HISTORII = 20;
 
 export const pobierzMaterial = async (id: number) => {
-  const m = await dane<Material | null>(supabase.from("materialy").select("*").eq("id", id).maybeSingle());
+  const m = await dane<Material | null>(supabase.from("materialy").select(KOLUMNY_MATERIALU).eq("id", id).maybeSingle());
   if (!m) throw new Error("Nie ma takiego materiału. Mógł zostać usunięty.");
   return m;
 };
@@ -38,6 +38,14 @@ export function Karta() {
           <Typography variant="h5">{m.nazwa}</Typography>
           <Typography color="text.secondary">{m.typ === "SAP" ? `Materiał SAP · ${m.nr_sap}` : "Materiał kosztowy"}</Typography>
           <Pole etykieta="Miejsce" wartosc={m.miejsce?.trim() || "—"} />
+          {!!m.stacje?.length && (
+            <Pole
+              etykieta="Lokalizacje funkcjonalne"
+              wartosc={posortujStacje(m.stacje)
+                .map((s) => opisStacji(s) + (s.aktywna ? "" : " (wycofana)"))
+                .join("\n")}
+            />
+          )}
           <Pole etykieta="Stan" wartosc={`${formatujIlosc(m.ilosc)} ${m.jednostka}`} duze />
           {m.opis?.trim() && <Pole etykieta="Opis" wartosc={m.opis} />}
           {m.ilosc <= 0 && <Typography color="error">Brak na stanie</Typography>}
@@ -68,7 +76,9 @@ function Pole({ etykieta, wartosc, duze }: { etykieta: string; wartosc: string; 
       <Typography variant="caption" color="text.secondary">
         {etykieta}
       </Typography>
-      <Typography variant={duze ? "h4" : "body1"}>{wartosc}</Typography>
+      <Typography variant={duze ? "h4" : "body1"} sx={{ whiteSpace: "pre-line" }}>
+        {wartosc}
+      </Typography>
     </div>
   );
 }

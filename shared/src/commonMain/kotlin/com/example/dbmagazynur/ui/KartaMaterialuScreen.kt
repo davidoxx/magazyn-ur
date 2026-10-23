@@ -43,6 +43,9 @@ import com.example.dbmagazynur.materialy.formatujIlosc
 import com.example.dbmagazynur.materialy.status
 import com.example.dbmagazynur.sesja.emailNaLogin
 import com.example.dbmagazynur.ui.theme.DBMagazynURTheme
+import com.example.dbmagazynur.stacje.Stacja
+import com.example.dbmagazynur.stacje.opis
+import com.example.dbmagazynur.stacje.posortujStacje
 
 // Karta materiału wraz z formularzem operacji i wyborem maszyny (ekrany nakładane na siebie)
 @Composable
@@ -173,6 +176,12 @@ private fun KartaScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             PoleKarty("Miejsce", material.miejsce?.takeIf { it.isNotBlank() } ?: "—")
+            if (material.stacje.isNotEmpty()) {
+                PoleKarty(
+                    "Lokalizacje funkcjonalne",
+                    posortujStacje(material.stacje).joinToString("\n") { it.opis() + if (it.aktywna) "" else " (wycofana)" },
+                )
+            }
             PoleKarty("Stan", "${formatujIlosc(material.ilosc)} ${material.jednostka}", duze = true)
             material.opis?.takeIf { it.isNotBlank() }?.let { PoleKarty("Opis", it) }
 
@@ -310,6 +319,7 @@ private fun KartaScreenPreview() {
             material = Material(
                 1, "Śruba imbusowa M8x20", opis = "Ocynk, DIN 912", typ = TypMaterialu.SAP,
                 nrSap = "10023456", miejsce = "R1-A3", ilosc = 120.0, jednostka = "szt",
+                stacje = listOf(Stacja(1, "F1", "Stacja 10", kod = "PL01-F1-ST10")),
             ),
             zdjecieTrwa = false,
             onZdjecie = {},

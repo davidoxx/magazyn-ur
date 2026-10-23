@@ -107,6 +107,7 @@ export function Glowny() {
           <MenuItem disabled>
             {login} · poziom {poziom}
           </MenuItem>
+          {lider && <MenuItem onClick={() => navigate("/stacje")}>Lokalizacje funkcjonalne</MenuItem>}
           {administrator && <MenuItem onClick={() => navigate("/maszyny")}>Maszyny</MenuItem>}
           {administrator && <MenuItem onClick={() => navigate("/uzytkownicy")}>Użytkownicy</MenuItem>}
           <MenuItem onClick={() => (ustawMenu(null), ustawOkienko("haslo"))}>Zmień hasło</MenuItem>

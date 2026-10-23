@@ -7,9 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dbmagazynur.data.komunikat
 import com.example.dbmagazynur.data.supabase
+import com.example.dbmagazynur.stacje.Stacja
+import com.example.dbmagazynur.stacje.posortujStacje
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 data class Zapisano(val material: Material, val nowy: Boolean)
@@ -32,6 +35,21 @@ class FormularzMaterialuViewModel : ViewModel() {
     var opis by mutableStateOf("")
     // Tylko przy dodawaniu (opcjonalny); trafia do historii jako część wpisu „utworzenie”
     var nrZamowienia by mutableStateOf("")
+    // Lokalizacje funkcjonalne (stacje), do których materiał jest przeznaczony
+    var stacje by mutableStateOf<List<Stacja>>(emptyList())
+        private set
+
+    // Wybór stacji: najpierw F1 / F2 / F3 (obszarWyboru = null), potem lista stacji z obszaru
+    var wyborStacji by mutableStateOf(false)
+        private set
+    var obszarWyboru by mutableStateOf<String?>(null)
+        private set
+    // Aktywne stacje wybranego obszaru (null = wczytywanie)
+    var dostepneStacje by mutableStateOf<List<Stacja>?>(null)
+        private set
+    var bladStacji by mutableStateOf<String?>(null)
+        private set
+    private var wczytywanieStacji: Job? = null
 
     var trwa by mutableStateOf(false)
         private set
@@ -71,12 +89,80 @@ class FormularzMaterialuViewModel : ViewModel() {
         this.opis = opis
         iloscTekst = ""
         nrZamowienia = ""
+        stacje = posortujStacje(material?.stacje.orEmpty())
+        wyborStacji = false
         blad = null
         otwarty = true
     }
 
     fun zamknij() {
         if (!trwa) otwarty = false
+    }
+
+    fun pokazWyborStacji() {
+        obszarWyboru = null
+        dostepneStacje = null
+        bladStacji = null
+        wyborStacji = true
+    }
+
+    fun zamknijWyborStacji() {
+        wczytywanieStacji?.cancel()
+        wyborStacji = false
+    }
+
+    // „Wstecz” z listy stacji wraca do wyboru F1 / F2 / F3
+    fun wsteczWyboruStacji() {
+        if (obszarWyboru == null) {
+            zamknijWyborStacji()
+        } else {
+            wczytywanieStacji?.cancel()
+            obszarWyboru = null
+        }
+    }
+
+    fun wybierzObszar(obszar: String) {
+        obszarWyboru = obszar
+        wczytajStacje()
+    }
+
+    // Lista wczytywana przy każdym wejściu, żeby było widać stacje dodane w trakcie zmiany
+    fun wczytajStacje() {
+        val obszar = obszarWyboru ?: return
+        wczytywanieStacji?.cancel()
+        wczytywanieStacji = viewModelScope.launch {
+            dostepneStacje = null
+            bladStacji = null
+            try {
+                dostepneStacje = posortujStacje(
+                    supabase.from("stacje")
+                        .select {
+                            filter {
+                                eq("obszar", obszar)
+                                eq("aktywna", true)
+                            }
+                        }
+                        .decodeList<Stacja>(),
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                bladStacji = e.komunikat()
+            }
+        }
+    }
+
+    // Zaznaczenie na liście dodaje stację, ponowne ją odznacza
+    fun przelaczStacje(stacja: Stacja) {
+        stacje = if (stacje.any { it.id == stacja.id }) {
+            stacje.filterNot { it.id == stacja.id }
+        } else {
+            posortujStacje(stacje + stacja)
+        }
+    }
+
+    fun usunStacje(stacja: Stacja) {
+        stacje = stacje.filterNot { it.id == stacja.id }
     }
 
     fun zapisanoObsluzone() {
@@ -97,15 +183,20 @@ class FormularzMaterialuViewModel : ViewModel() {
             trwa = true
             blad = null
             try {
+                val wybraneStacje = stacje.map { it.id }
                 val wynik = if (material == null) {
                     supabase.postgrest
-                        .rpc("dodaj_material", parametryNowegoMaterialu(dane, nrZamowienia))
+                        .rpc("dodaj_material", parametryNowegoMaterialu(dane, nrZamowienia, wybraneStacje))
                         .decodeAs<Material>()
                 } else {
-                    supabase.from("materialy").update(dane) {
+                    val zapisany = supabase.from("materialy").update(dane) {
                         filter { eq("id", material.id) }
                         select()
                     }.decodeSingleOrNull<Material>()
+                    // Stacje osobnym wywołaniem i tylko po zmianie
+                    val zmiany = zmianyStacji(material.id, material.stacje.map { it.id }, wybraneStacje)
+                    if (zapisany != null && zmiany != null) supabase.postgrest.rpc("zmien_stacje_materialu", zmiany)
+                    zapisany
                 }
 
                 if (wynik == null) {

@@ -1,6 +1,8 @@
 package com.example.dbmagazynur.materialy
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -42,13 +44,28 @@ fun daneMaterialu(
     )
 }
 
-// Parametry funkcji dodaj_material: te same pola z przedrostkiem p_ i numer zamówienia.
+// Parametry funkcji dodaj_material: te same pola z przedrostkiem p_, numer zamówienia i stacje.
 // Nowy materiał idzie przez funkcję, żeby numer trafił do wpisu „utworzenie” w historii.
-fun parametryNowegoMaterialu(dane: JsonObject, nrZamowienia: String): JsonObject =
+fun parametryNowegoMaterialu(dane: JsonObject, nrZamowienia: String, stacje: List<Long> = emptyList()): JsonObject =
     buildJsonObject {
         dane.forEach { (kolumna, wartosc) -> put("p_$kolumna", wartosc) }
         put("p_nr_zamowienia", nrZamowienia.trim().ifEmpty { null })
+        if (stacje.isNotEmpty()) put("p_stacje", JsonArray(stacje.distinct().map(::JsonPrimitive)))
     }
+
+// Parametry zmien_stacje_materialu przy edycji: tylko różnice względem stacji z chwili
+// otwarcia formularza, więc nie skasuje stacji dodanych w międzyczasie przez kogoś innego.
+// null = nic się nie zmieniło.
+fun zmianyStacji(materialId: Long, przed: List<Long>, po: List<Long>): JsonObject? {
+    val dodaj = po.distinct() - przed.toSet()
+    val usun = przed.distinct() - po.toSet()
+    if (dodaj.isEmpty() && usun.isEmpty()) return null
+    return buildJsonObject {
+        put("p_material_id", materialId)
+        put("p_dodaj", JsonArray(dodaj.map(::JsonPrimitive)))
+        put("p_usun", JsonArray(usun.map(::JsonPrimitive)))
+    }
+}
 
 private fun blad(komunikat: String): Result<JsonObject> =
     Result.failure(IllegalArgumentException(komunikat))
